@@ -7,10 +7,10 @@
 **Rationale:** Separates business logic from infrastructure, improves testability, enables independent evolution of layers
 **Impact:** All new domains must follow the established layer structure
 
-### SQLC for Database Access
-**Decision:** Use SQLC instead of raw SQL or ORM
-**Rationale:** Type-safe queries, compile-time safety, better performance than ORMs, explicit SQL control
-**Impact:** All database queries must be SQLC-generated, placed in `sqlc/queries/`
+### Drizzle ORM for Database Access
+**Decision:** Use Drizzle ORM instead of raw SQL or other ORMs
+**Rationale:** Type-safe queries, excellent TypeScript support, better performance than heavy ORMs, explicit SQL control when needed
+**Impact:** All database queries use Drizzle ORM, schema definitions in `src/drizzle/schema/`
 
 ### JWT Stateless Authentication
 **Decision:** JWT tokens without server-side session storage
@@ -22,10 +22,10 @@
 **Rationale:** Memory-hard, resistant to GPU/ASIC attacks, recommended by security experts
 **Impact:** All password operations must use the password.Hasher wrapper
 
-### Echo Framework
-**Decision:** Echo v4 as HTTP framework
-**Rationale:** High performance, minimal boilerplate, excellent middleware support, active community
-**Impact:** All HTTP handlers use Echo context and patterns
+### Hono Framework
+**Decision:** Hono as HTTP framework
+**Rationale:** High performance, minimal boilerplate, excellent middleware support, Edge runtime compatible, active TypeScript community
+**Impact:** All HTTP handlers use Hono context and patterns
 
 ## Domain Rules
 
@@ -38,7 +38,7 @@
 - Minimum full name length: 2 characters
 
 **Validation Rules:**
-- Email format validated by validator/v10
+- Email format validated by Zod schemas
 - Password strength enforced by Argon2id parameters
 - Phone number is optional
 - Full name required for registration
@@ -72,13 +72,13 @@
 
 ### Core Application Files
 
-**cmd/server/main.go**
+**src/index.ts**
 - Application entry point
 - Loads environment-specific configuration
 - Initializes logger and application
 - Handles graceful shutdown
 
-**internal/app/app.go**
+**src/app/app.ts**
 - Main application structure
 - Dependency injection container
 - Middleware setup (RequestID, Logger, Recovery, CORS, RateLimit)
@@ -87,57 +87,61 @@
 
 ### Configuration
 
-**internal/infrastructure/config/config.go**
+**src/infrastructure/config/config.ts**
 - Configuration structs for all components
-- Viper-based configuration loading
+- dotenv/config-based configuration loading
 - Environment variable support
-- Type-safe configuration access
+- Type-safe configuration access with Zod schemas
 
-**configs/*.yaml**
+**.env.example**
 - Environment-specific configurations
 - local, dev, uat, prod environments
 - Database, JWT, logging, CORS, rate limit settings
 
 ### Database Layer
 
-**internal/infrastructure/db/postgres.go**
+**src/infrastructure/db/postgres.ts**
 - PostgreSQL database implementation
 - Connection pooling configuration
 - Health check implementation
-- SQLC queries integration
+- Drizzle ORM integration
 
-**internal/infrastructure/db/factory.go**
+**src/infrastructure/db/factory.ts**
 - Database factory for creating connections
 - Abstracts database type selection
 - Currently supports PostgreSQL only
 
-**internal/infrastructure/sqlc/db/**
-- SQLC-generated code
-- Type-safe database queries
-- Models and querier interfaces
-- Auto-generated from SQL files
+**src/drizzle/schema/**
+- Drizzle schema definitions
+- Type-safe database models
+- Table definitions and relationships
+
+**src/drizzle/migrations/**
+- Database migration files
+- Up and down migrations
+- Versioned schema changes
 
 ### Domain: User
 
-**internal/domain/user/entity/user.go**
+**src/domain/user/entity/user.ts**
 - User entity definition
 - UUID-based primary key
 - Fields: id, email, password, full_name, phone, timestamps
 
-**internal/domain/user/repository/repository.go**
-- SQLC-based repository implementation
+**src/domain/user/repository/repository.ts**
+- Drizzle-based repository implementation
 - CRUD operations for users
 - Email uniqueness check
 - Pagination support
 
-**internal/domain/user/usecase/usecase.go**
+**src/domain/user/usecase/usecase.ts**
 - Business logic for user operations
 - Register, Login, GetProfile, UpdateProfile, DeleteAccount, ListUsers
 - Password hashing and verification
 - JWT token generation
 - Domain-specific error definitions
 
-**internal/domain/user/handler/handler.go**
+**src/domain/user/handler/handler.ts**
 - HTTP handlers for user endpoints
 - Request/response DTO mapping
 - Error handling and HTTP status codes
@@ -145,25 +149,25 @@
 
 ### Domain: Task
 
-**internal/domain/task/entity/task.go**
+**src/domain/task/entity/task.ts**
 - Task entity definition
 - UUID-based primary key
 - Fields: id, user_id, title, description, status, priority, due_date, completed_at, timestamps
 
-**internal/domain/task/repository/repository.go**
-- pgx-based repository implementation
+**src/domain/task/repository/repository.ts**
+- Drizzle-based repository implementation
 - CRUD operations for tasks
 - User filtering for list operations
 - Ownership verification
 
-**internal/domain/task/usecase/usecase.go**
+**src/domain/task/usecase/usecase.ts**
 - Business logic for task operations
 - CreateTask, GetTask, ListTasks, UpdateTask, DeleteTask
 - Status and priority validation
 - Ownership enforcement
 - Domain-specific error definitions
 
-**internal/domain/task/handler/handler.go**
+**src/domain/task/handler/handler.ts**
 - HTTP handlers for task endpoints
 - Request/response DTO mapping
 - Error handling and HTTP status codes
@@ -171,23 +175,23 @@
 
 ### Infrastructure Components
 
-**internal/infrastructure/logger/logger.go**
-- Zerolog-based structured logger
+**src/infrastructure/logger/logger.ts**
+- Pino-based structured logger
 - Configurable log levels and format
 - Request ID integration
 - Context-aware logging
 
-**internal/infrastructure/password/passworder.go**
+**src/infrastructure/password/passworder.ts**
 - Argon2id password hashing wrapper
 - Configurable parameters
 - Hash and verify operations
 
-**internal/infrastructure/http/client/resty.go**
-- Resty HTTP client wrapper
+**src/infrastructure/http/client/httpClient.ts**
+- HTTP client wrapper (using fetch)
 - For making external HTTP requests
 - Configurable timeouts and retries
 
-**pkg/middleware/**
+**src/middleware/**
 - Custom middleware implementations
 - JWT authentication
 - Request ID generation
@@ -195,7 +199,7 @@
 - CORS handling
 - Rate limiting
 
-**pkg/health/**
+**src/health/**
 - Health check handler
 - Database connectivity check
 - Readiness probe
@@ -204,20 +208,20 @@
 
 ### Domain Dependencies
 - **User Domain:** Depends on config, logger, password, middleware (JWT)
-- **Task Domain:** Depends on logger only (uses pgx directly for DB)
+- **Task Domain:** Depends on logger only (uses Drizzle directly for DB)
 
 ### Infrastructure Dependencies
-- **Database:** pgx/v5 driver
-- **Config:** Viper
-- **Logging:** Zerolog
-- **Validation:** validator/v10
-- **Auth:** golang-jwt/jwt/v5
-- **Password:** golang.org/x/crypto
+- **Database:** pg (node-postgres) driver
+- **Config:** dotenv/config
+- **Logging:** pino
+- **Validation:** zod
+- **Auth:** jose or similar JWT library
+- **Password:** argon2 or similar
 
 ### External Dependencies
 - **PostgreSQL:** Primary database
-- **Testcontainers:** Integration testing
-- **Swagger:** API documentation
+- **Testcontainers:** Integration testing (via bun test)
+- **OpenAPI:** API documentation
 
 ## Key Implementation Details
 
@@ -247,44 +251,44 @@
 - Headers: Authorization, Content-Type, X-Request-ID
 
 ### Error Handling Pattern
-```go
+```typescript
 // UseCase layer: Domain errors
-if user == nil {
-    return nil, ErrUserNotFound
+if (!user) {
+  return ErrUserNotFound;
 }
 
 // Repository layer: Wrap with context
-if err != nil {
-    return fmt.Errorf("failed to create user: %w", err)
+if (err) {
+  throw new Error(`Failed to create user: ${err.message}`);
 }
 
 // Handler layer: Map to HTTP status
-if errors.Is(err, ErrUserNotFound) {
-    return c.JSON(http.StatusNotFound, ErrorResponse{...})
+if (err instanceof ErrUserNotFound) {
+  return c.json({ error: 'User not found' }, 404);
 }
 ```
 
 ### Request Validation
-- Use validator/v10 struct tags
+- Use Zod schemas for validation
 - Validate before business logic
 - Return validation errors with field details
-- Example: `validate:"required,email"`
+- Example: `z.string().email()`
 
 ### Pagination Pattern
-```go
+```typescript
 // Standard pagination parameters
-limit, offset := getPaginationParams(c)
+const { limit, offset } = getPaginationParams(c);
 
 // Repository returns data + total count
-users, total, err := repo.List(ctx, limit, offset)
+const { users, total } = await repo.list(ctx, limit, offset);
 
 // Response includes pagination metadata
-return c.JSON(http.StatusOK, ListResponse{
-    Users: users,
-    Total: total,
-    Limit: limit,
-    Offset: offset,
-})
+return c.json({
+  users,
+  total,
+  limit,
+  offset
+});
 ```
 
 ## Testing Strategy
@@ -293,7 +297,7 @@ return c.JSON(http.StatusOK, ListResponse{
 - Test usecase business logic
 - Mock repository dependencies
 - Test error paths and edge cases
-- Located in same package as implementation
+- Located in same directory as implementation with `.test.ts` suffix
 
 ### Integration Tests
 - Test API endpoints end-to-end
@@ -302,46 +306,47 @@ return c.JSON(http.StatusOK, ListResponse{
 - Located in test/integration/
 
 ### Mock Generation
-- Use go.uber.org/mock
+- Use vi (Vitest) for mocking
 - Generate mocks from domain interfaces
 - Located in domain/*/mock/ directories
 - Regenerate when interfaces change
 
 ### Test Helpers
-- test/mock/sqlmock.go - SQL mock utilities
-- test/integration/test_helper.go - Integration test setup
+- test/mock/dbMock.ts - Database mock utilities
+- test/integration/testHelper.ts - Integration test setup
 - Common test fixtures and utilities
 
 ## Migration Strategy
 
 ### Database Migrations
-- SQLC migration format
+- Drizzle Kit migration format
 - Up and down migrations required
-- Version naming: YYYYMMDD_NNN_description
+- Version naming: timestamp_description
 - Apply migrations in order
 - Rollback support with down migrations
 
 ### Schema Changes
 - Add new migrations for schema changes
 - Never modify existing migrations
-- Use SQLC to regenerate queries after schema changes
+- Use Drizzle to regenerate schema after changes
 - Test migrations in all environments
 
 ## Configuration Management
 
 ### Environment Hierarchy
-1. Base config from YAML file
+1. Base config from .env file
 2. Environment variable overrides
-3. Default values in struct tags
+3. Default values in Zod schemas
 
 ### Configuration Files
-- `configs/local.yaml` - Local development
-- `configs/dev.yaml` - Development environment
-- `configs/uat.yaml` - User acceptance testing
-- `configs/prod.yaml` - Production
+- `.env.example` - Example configuration
+- `.env.local` - Local development (not committed)
+- `.env.dev` - Development environment
+- `.env.uat` - User acceptance testing
+- `.env.prod` - Production
 
 ### Environment Variables
-- `SERVER_ENV` - Environment selector (default: local)
+- `NODE_ENV` - Environment selector (default: local)
 - Database credentials via env vars in production
 - JWT secret via env vars in production
 - Never commit secrets to repository
@@ -379,9 +384,9 @@ return c.JSON(http.StatusOK, ListResponse{
 - Single-region deployment only
 
 ### Technical Debt
-- Task domain uses pgx directly instead of SQLC
-- Mixed database access patterns (SQLC vs pgx)
-- Consider standardizing on one approach
+- Consider adding caching layer
+- Consider standardizing database access patterns
+- Evaluate alternative ORM options
 
 ### Future Considerations
 - Add Redis caching layer

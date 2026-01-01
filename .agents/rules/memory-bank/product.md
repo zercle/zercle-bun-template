@@ -1,7 +1,7 @@
 # Product Goals & Features
 
 ## Product Vision
-To provide a production-ready, well-architected Go template that accelerates API development while maintaining code quality, security, and scalability.
+To provide a production-ready, well-archityped Bun template that accelerates API development while maintaining code quality, security, and scalability.
 
 ## Core Features
 
@@ -28,7 +28,7 @@ To provide a production-ready, well-architected Go template that accelerates API
 ### API Features
 - RESTful API design
 - OpenAPI/Swagger documentation
-- Request validation using validator/v10
+- Request validation using Zod
 - Structured error responses
 - Health check endpoints
 
@@ -43,9 +43,10 @@ To provide a production-ready, well-architected Go template that accelerates API
 
 ### Performance
 - Database connection pooling
-- Efficient query generation via SQLC
-- Structured logging with zerolog
+- Efficient query generation via Drizzle ORM
+- Structured logging with Pino
 - Graceful shutdown handling
+- Fast runtime with Bun
 
 ### Observability
 - Structured JSON logging
@@ -55,10 +56,10 @@ To provide a production-ready, well-architected Go template that accelerates API
 
 ### Developer Experience
 - Clear project structure
-- Type-safe database operations
+- Type-safe database operations with TypeScript
 - Comprehensive test coverage
 - Docker support for development and deployment
-- Makefile for common operations
+- Bun package management
 
 ## Roadmap
 

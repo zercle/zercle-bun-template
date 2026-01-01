@@ -1,16 +1,16 @@
-# Zercle Go Template
+# Zercle Bun Template
 
-A production-ready RESTful API template built with Go Echo framework, featuring clean architecture, JWT authentication, and PostgreSQL database. This template provides a solid foundation for building Go microservices or REST APIs with best practices already implemented.
+A production-ready RESTful API template built with Bun runtime and Hono framework, featuring clean architecture, JWT authentication, and PostgreSQL database. This template provides a solid foundation for building Bun microservices or REST APIs with best practices already implemented.
 
 ## Features
 
 - **Clean Architecture** - Domain-driven design with clear separation of concerns
-- **Type-safe Database Operations** - SQLC for compile-time safe SQL queries
+- **Type-safe Database Operations** - Drizzle ORM for type-safe database queries
 - **JWT Authentication** - Stateless authentication with configurable expiration
 - **Password Security** - Argon2id hashing for secure password storage
 - **Comprehensive Testing** - Unit, integration, and mock testing infrastructure
 - **API Documentation** - Swagger/OpenAPI documentation out of the box
-- **Structured Logging** - Zerolog for zero-allocation JSON logging
+- **Structured Logging** - Pino for high-performance JSON logging
 - **Docker Support** - Containerized deployment with Docker Compose
 - **Rate Limiting** - Configurable request rate limiting
 - **CORS Support** - Configurable cross-origin resource sharing
@@ -18,28 +18,27 @@ A production-ready RESTful API template built with Go Echo framework, featuring 
 
 ## Tech Stack
 
-- **Language**: Go 1.24.0+
-- **Web Framework**: Echo v4
-- **Database**: PostgreSQL 12+ with pgx/v5 driver
-- **ORM/Query Builder**: SQLC (type-safe SQL generation)
-- **Authentication**: JWT (golang-jwt/jwt/v5)
-- **Password Hashing**: Argon2id (golang.org/x/crypto)
-- **Configuration**: Viper
-- **Logging**: Zerolog
-- **Validation**: go-playground/validator/v10
-- **Documentation**: Swaggo (Swagger)
-- **Testing**: testify, go.uber.org/mock, testcontainers
+- **Language**: TypeScript 5.x
+- **Runtime**: Bun 1.0.0+
+- **Web Framework**: Hono
+- **Database**: PostgreSQL 12+ with pg (node-postgres)
+- **ORM/Query Builder**: Drizzle ORM
+- **Authentication**: JWT (jose)
+- **Password Hashing**: Argon2id (argon2 npm package)
+- **Configuration**: dotenv/config
+- **Logging**: Pino
+- **Validation**: Zod
+- **Documentation**: OpenAPI tools for TypeScript
+- **Testing**: bun test, vi, testcontainers-node
 
 ## Project Structure
 
 ```
 .
-├── cmd/
-│   └── server/
-│       └── main.go              # Application entry point
-├── internal/
+├── src/
+│   ├── index.ts                 # Application entry point
 │   ├── app/
-│   │   └── app.go               # Application orchestration & DI
+│   │   └── app.ts               # Application orchestration & DI
 │   ├── domain/
 │   │   ├── user/                # User domain (example)
 │   │   │   ├── entity/          # Business entities
@@ -49,18 +48,17 @@ A production-ready RESTful API template built with Go Echo framework, featuring 
 │   │   │   ├── request/         # Request DTOs
 │   │   │   ├── response/        # Response DTOs
 │   │   │   ├── mock/            # Mock implementations
-│   │   │   └── interface.go     # Domain interfaces
+│   │   │   └── interface.ts     # Domain interfaces
 │   │   └── task/                # Task domain (example)
 │   └── infrastructure/
 │       ├── config/              # Configuration management
 │       ├── db/                  # Database abstraction
 │       ├── http/                # HTTP client
 │       ├── logger/              # Structured logging
-│       ├── password/            # Password hashing
-│       └── sqlc/db/             # SQLC-generated code
-├── sqlc/
+│       └── password/            # Password hashing
+├── drizzle/
 │   ├── migrations/              # Database migrations
-│   └── queries/                 # SQL query files
+│   └── schema.ts                # Drizzle schema definitions
 ├── configs/
 │   ├── local.yaml               # Local development config
 │   ├── dev.yaml                 # Development config
@@ -76,13 +74,13 @@ A production-ready RESTful API template built with Go Echo framework, featuring 
 │   └── docker/
 │       ├── Dockerfile           # Docker image
 │       └── docker-compose.yml   # Docker Compose setup
-├── docs/                        # Swagger documentation
+├── docs/                        # OpenAPI documentation
 ├── .env.example                 # Environment variables template
-├── go.mod                       # Go module definition
-├── go.sum                       # Go dependencies
-├── Makefile                     # Common operations
-├── sqlc.yaml                    # SQLC configuration
-└── .golangci.yml                # Linting configuration
+├── package.json                 # Dependencies and scripts
+├── tsconfig.json                # TypeScript configuration
+├── drizzle.config.ts            # Drizzle ORM configuration
+├── bun.lockb                    # Bun lockfile
+└── eslint.config.js             # ESLint configuration
 ```
 
 ## Architecture
@@ -91,10 +89,10 @@ This template follows **Clean Architecture** with **Domain-Driven Design (DDD)**
 
 ### Layers
 
-1. **Domain Layer** (`internal/domain/`) - Core business logic and entities, independent of infrastructure
-2. **Infrastructure Layer** (`internal/infrastructure/`) - External concerns and technical implementations
-3. **Application Layer** (`internal/app/`) - Application orchestration and dependency injection
-4. **Entry Point** (`cmd/server/`) - Application bootstrap
+1. **Domain Layer** (`src/domain/`) - Core business logic and entities, independent of infrastructure
+2. **Infrastructure Layer** (`src/infrastructure/`) - External concerns and technical implementations
+3. **Application Layer** (`src/app/`) - Application orchestration and dependency injection
+4. **Entry Point** (`src/index.ts`) - Application bootstrap
 
 ### Data Flow
 
@@ -109,7 +107,8 @@ Client → Handler → UseCase → Repository → Database
 
 ### Prerequisites
 
-- Go 1.24.0 or higher
+- Bun 1.0.0 or higher
+- Node.js 18+ (for some development tools)
 - PostgreSQL 12+
 - Docker (optional, for containerized deployment)
 
@@ -117,8 +116,8 @@ Client → Handler → UseCase → Repository → Database
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/zercle/zercle-go-template.git
-cd zercle-go-template
+git clone https://github.com/zercle/zercle-bun-template.git
+cd zercle-bun-template
 ```
 
 2. Copy environment variables:
@@ -128,25 +127,24 @@ cp .env.example .env
 
 3. Install dependencies:
 ```bash
-go mod download
+bun install
 ```
 
 4. Configure database connection in `.env` or `configs/local.yaml`
 
 5. Run database migrations:
 ```bash
-# Using migration tool (to be added)
-migrate -path sqlc/migrations -database "postgres://user:pass@localhost:5432/dbname?sslmode=disable" up
+bunx drizzle-kit push
 ```
 
-6. Generate SQLC code:
+6. Generate Drizzle client:
 ```bash
-sqlc generate
+bunx drizzle-kit generate
 ```
 
-7. Generate Swagger documentation:
+7. Generate OpenAPI documentation:
 ```bash
-swag init -g cmd/server/main.go
+bun run docs:generate
 ```
 
 ### Running the Application
@@ -158,7 +156,7 @@ swag init -g cmd/server/main.go
 export SERVER_ENV=local
 
 # Run the application
-go run cmd/server/main.go
+bun run src/index.ts
 ```
 
 Or use the provided script:
@@ -169,37 +167,37 @@ Or use the provided script:
 #### Production
 
 ```bash
-# Build the binary
-go build -o bin/server cmd/server/main.go
+# Build the application
+bun build src/index.ts --outdir ./dist
 
-# Run the binary
-./bin/server
+# Run the built application
+bun run dist/index.js
 ```
 
 #### Docker
 
 ```bash
 # Build Docker image
-docker build -t zercle-go-template .
+docker build -t zercle-bun-template .
 
 # Run container
 docker run -p 3000:3000 \
   -e SERVER_ENV=prod \
   -e DATABASE_URL=postgres://user:pass@host:5432/dbname \
-  zercle-go-template
+  zercle-bun-template
 ```
 
 #### Docker Compose
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
 ## Configuration
@@ -258,53 +256,52 @@ http://localhost:3000/swagger/index.html
 ### Run All Tests
 
 ```bash
-go test ./...
+bun test
 ```
 
 ### Run Tests with Coverage
 
 ```bash
-go test -cover ./...
+bun test --coverage
 ```
 
 ### Generate Coverage Report
 
 ```bash
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
+bun test --coverage
 ```
 
 ### Run Integration Tests
 
 ```bash
-go test -tags=integration ./test/integration/
+bun test test/integration/*.test.ts
 ```
 
 ### Run Specific Test
 
 ```bash
-go test -v -run TestLogin ./internal/domain/user/usecase/
+bun test test/unit/user/usecase.test.ts -t "TestLogin"
 ```
 
 ## Development Guidelines
 
 ### Adding a New Domain
 
-1. Create domain structure under `internal/domain/<domain>/`
+1. Create domain structure under `src/domain/<domain>/`
 2. Define entity in `entity/` directory
-3. Create interfaces in `interface.go`
+3. Create interfaces in `interface.ts`
 4. Implement repository, usecase, and handler
 5. Add request/response DTOs
 6. Write tests
-7. Wire dependencies in `internal/app/app.go`
+7. Wire dependencies in `src/app/app.ts`
 8. Register routes
-9. Update Swagger documentation
+9. Update OpenAPI documentation
 
 ### Code Style
 
-- Follow Go standard formatting (`go fmt`)
-- Use `golangci-lint` for linting
-- Write godoc comments for exported functions
+- Follow TypeScript standard formatting
+- Use ESLint and Prettier for linting
+- Write JSDoc comments for exported functions
 - Keep functions under 50 lines when possible
 - Follow SOLID principles
 
@@ -312,17 +309,17 @@ go test -v -run TestLogin ./internal/domain/user/usecase/
 
 - Write unit tests for business logic
 - Use table-driven tests for multiple scenarios
-- Mock external dependencies
+- Mock external dependencies with vi
 - Aim for >80% coverage on critical paths
 - Test error paths, not just happy paths
 
 ### Database Migrations
 
-1. Create migration files in `sqlc/migrations/`
+1. Create migration files in `drizzle/migrations/`
 2. Format: `YYYYMMDD_NNN_description`
 3. Write both up and down migrations
-4. Apply migrations in order
-5. Regenerate SQLC code: `sqlc generate`
+4. Apply migrations with Drizzle Kit
+5. Regenerate Drizzle client: `bunx drizzle-kit generate`
 
 ## Common Commands
 
@@ -330,50 +327,56 @@ go test -v -run TestLogin ./internal/domain/user/usecase/
 
 ```bash
 # Run linter
-golangci-lint run
+bunx eslint .
 
 # Fix issues automatically
-golangci-lint run --fix
+bunx eslint . --fix
 ```
 
 ### Formatting
 
 ```bash
 # Format code
-go fmt ./...
+bunx prettier --write .
 
 # Check for issues
-go vet ./...
+bunx prettier --check .
 ```
 
 ### Dependencies
 
 ```bash
-# Tidy dependencies
-go mod tidy
+# Install dependencies
+bun install
+
+# Add a dependency
+bun add <package-name>
+
+# Add a dev dependency
+bun add -d <package-name>
 
 # Update dependencies
-go get -u ./...
-
-# Verify dependencies
-go mod verify
+bun update
 ```
 
-### SQLC
+### Drizzle Kit
 
 ```bash
-# Generate SQLC code
-sqlc generate
+# Generate Drizzle client
+bunx drizzle-kit generate
 
-# Validate SQLC configuration
-sqlc validate
+# Push schema changes to database
+bunx drizzle-kit push
+
+# Open Drizzle Studio
+bunx drizzle-kit studio
 ```
 
 ### Documentation
 
 ```bash
-# Generate Swagger docs
-swag init -g cmd/server/main.go
+# Generate OpenAPI docs
+bun run docs:generate
 ```
 
 ## Environment Variables
@@ -390,15 +393,15 @@ Key environment variables (see `.env.example`):
 
 - Passwords hashed with Argon2id
 - JWT tokens for stateless authentication
-- Input validation on all endpoints
+- Input validation with Zod on all endpoints
 - CORS configuration per environment
 - Rate limiting to prevent abuse
-- SQL injection prevention via SQLC
+- SQL injection prevention via Drizzle ORM
 
 ## Performance
 
 - Database connection pooling
-- Efficient query generation via SQLC
+- Efficient query generation via Drizzle ORM
 - Structured logging with minimal overhead
 - Graceful shutdown handling
 - Configurable timeouts
@@ -422,8 +425,8 @@ Key environment variables (see `.env.example`):
 
 The provided Dockerfile uses a multi-stage build for optimization:
 
-- Builder stage: Compiles the Go binary
-- Runtime stage: Alpine-based minimal image
+- Builder stage: Installs dependencies and builds the Bun application
+- Runtime stage: Minimal Bun-based image
 - Non-root user for security
 - Health checks configured
 
@@ -465,4 +468,4 @@ Future enhancements planned:
 
 ## Acknowledgments
 
-Built with best practices and modern Go development tools. Special thanks to the open-source community for the excellent libraries and frameworks used in this project.
+Built with best practices and modern Bun and TypeScript development tools. Special thanks to the open-source community for the excellent libraries and frameworks used in this project.

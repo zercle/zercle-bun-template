@@ -1,59 +1,67 @@
 # Technical Standards & Guidelines
 
 ## Language & Runtime
-- **Go Version:** 1.24.0
-- **Module:** github.com/zercle/zercle-go-template
+- **TypeScript Version:** 5.x
+- **Bun Version:** 1.0.0+
+- **Module:** github.com/zercle/zercle-bun-template
 
 ## Core Dependencies
 
 ### Web Framework
-- **Echo v4** - HTTP server framework
-- **Labstack middleware** - Request ID, logger, recovery, CORS
+- **Hono** - HTTP server framework
+- **Hono middleware** - Request ID, logger, recovery, CORS
 
 ### Database
-- **pgx/v5** - PostgreSQL driver
-- **SQLC** - Type-safe SQL query generation
-- **Testcontainers** - Integration testing with real databases
+- **pg (node-postgres)** - PostgreSQL driver
+- **Drizzle ORM** - Type-safe SQL query generation
+- **Drizzle Kit** - Migration and schema management
 
 ### Authentication
-- **golang-jwt/jwt/v5** - JWT token generation and validation
-- **Argon2id** - Password hashing (golang.org/x/crypto)
+- **jose** - JWT token generation and validation
+- **argon2** - Password hashing
 
 ### Configuration
-- **Viper** - Configuration management
-- **YAML** - Configuration file format
+- **dotenv/config** - Configuration management
+- **zod** - Configuration validation
 
 ### Logging
-- **Zerolog** - Structured, zero-allocation logging
+- **pino** - Structured, zero-allocation logging
 
 ### Validation
-- **go-playground/validator/v10** - Request validation
+- **zod** - Request validation and schema validation
 
 ### Documentation
-- **Swaggo** - Swagger/OpenAPI documentation generation
+- **OpenAPI** - API documentation generation
 
 ### Testing
-- **testify** - Assertions and mocking
-- **go.uber.org/mock** - Mock generation
+- **bun test** - Built-in testing framework
+- **vi (Vitest)** - Mocking utilities
 - **testcontainers** - Integration testing
 
 ## Coding Standards
 
 ### Naming Conventions
-- **Files:** lowercase with underscores (e.g., `user_handler.go`)
-- **Packages:** lowercase, single word (e.g., `handler`, `usecase`)
-- **Interfaces:** Simple names describing capability (e.g., `UserRepository`)
-- **Implementations:** Descriptive names (e.g., `userUseCase`, `UserHandler`)
+- **Files:** camelCase with .ts extension (e.g., `userHandler.ts`)
+- **Packages/Directories:** lowercase (e.g., `handler`, `usecase`)
+- **Interfaces:** PascalCase with 'I' prefix (e.g., `IUserRepository`)
+- **Classes:** PascalCase (e.g., `UserUseCase`, `UserHandler`)
 - **Constants:** UPPER_SNAKE_CASE
-- **Private variables:** camelCase
-- **Public variables:** PascalCase
+- **Private variables:** camelCase with underscore prefix (e.g., `_privateVar`)
+- **Public variables:** camelCase
 
 ### Code Organization
-- **Package structure:** One responsibility per package
+- **Directory structure:** One responsibility per directory
 - **File size:** Keep files focused and under 300 lines when possible
 - **Function length:** Prefer functions under 50 lines
-- **Exported functions:** Must have godoc comments
+- **Exported functions:** Must have JSDoc comments
 - **Error handling:** Always handle errors, never ignore
+
+### TypeScript Specifics
+- **Strict mode enabled:** All TypeScript strict checks
+- **Explicit types:** Avoid `any` type, use `unknown` for truly unknown data
+- **Interfaces vs Types:** Use interfaces for object shapes, types for unions/intersections
+- **Enums:** Prefer string enums or const assertions
+- **Async/await:** Prefer over Promises for readability
 
 ### Design Patterns
 
@@ -78,7 +86,7 @@
 ### SOLID Principles
 
 **Single Responsibility:**
-- Each package has one clear purpose
+- Each module has one clear purpose
 - Functions do one thing well
 - Classes/interfaces focused on single capability
 
@@ -110,19 +118,20 @@
 
 ### Test Organization
 ```
-domain/
-  user/
-    handler/
-      handler.go
-      handler_test.go
-    usecase/
-      usecase.go
-      usecase_test.go
+src/
+  domain/
+    user/
+      handler/
+        handler.ts
+        handler.test.ts
+      usecase/
+        usecase.ts
+        usecase.test.ts
 test/
   integration/
-    api_test.go
+    api.test.ts
   mock/
-    sqlmock_test.go
+    dbMock.test.ts
 ```
 
 ### Testing Best Practices
@@ -134,13 +143,14 @@ test/
 - Test error paths, not just happy paths
 
 ### Test Naming
-- `Test<FunctionName>_<Scenario>_<ExpectedResult>`
-- Example: `TestLogin_ValidCredentials_ReturnsToken`
+- `describe('<FunctionName>_<Scenario>_<ExpectedResult>')`
+- `it('should <expected behavior>')`
+- Example: `describe('Login_ValidCredentials_ReturnsToken')`
 
 ## Security Standards
 
 ### Password Storage
-- Always use Argon2id for password hashing
+- Always use Argon2 for password hashing
 - Configurable memory, iterations, parallelism
 - Never store plaintext passwords
 
@@ -152,8 +162,8 @@ test/
 
 ### Input Validation
 - Validate all user inputs
-- Use validator/v10 for request DTOs
-- Sanitize database queries (SQLC prevents SQL injection)
+- Use Zod schemas for request DTOs
+- Sanitize database queries (Drizzle prevents SQL injection)
 - Validate file uploads (size, type)
 
 ### CORS Configuration
@@ -169,16 +179,16 @@ test/
 ## Database Standards
 
 ### Migrations
-- Use SQLC migration format
+- Use Drizzle Kit migration format
 - Up and down migrations required
-- Version with timestamp format: `YYYYMMDD_NNN_description`
-- Place in `sqlc/migrations/` directory
+- Version with timestamp format
+- Place in `src/drizzle/migrations/` directory
 
 ### Queries
-- Use SQLC for type-safe queries
-- SQL files in `sqlc/queries/` directory
+- Use Drizzle ORM for type-safe queries
+- Schema definitions in `src/drizzle/schema/`
 - Named queries for clarity
-- Parameterized queries (SQLC handles this)
+- Parameterized queries (Drizzle handles this)
 
 ### Connection Pooling
 - Configure min/max connections
@@ -195,8 +205,8 @@ test/
 - **Validation errors:** Input validation failures
 
 ### Error Wrapping
-- Wrap errors with context using `fmt.Errorf`
-- Use `errors.Is()` and `errors.As()` for error checking
+- Wrap errors with context using custom error classes
+- Use `instanceof` for error checking
 - Log errors with sufficient context
 - Return appropriate HTTP status codes
 
@@ -254,7 +264,7 @@ test/
 - Deprecation notices for breaking changes
 
 ### Documentation
-- Swagger/OpenAPI documentation
+- OpenAPI/Swagger documentation
 - Auto-generated from code annotations
 - Example requests/responses
 - Authentication requirements documented
@@ -284,7 +294,7 @@ test/
 - Use connection pooling
 - Optimize queries with proper indexes
 - Batch operations when possible
-- Use prepared statements (SQLC handles this)
+- Use prepared statements (Drizzle handles this)
 
 ### HTTP
 - Enable compression for large responses
@@ -301,9 +311,14 @@ test/
 ## Code Quality
 
 ### Linting
-- Use golangci-lint
-- Configure in `.golangci.yml`
+- Use ESLint with TypeScript support
+- Configure in `.eslintrc.json`
 - Run in CI/CD pipeline
+
+### Formatting
+- Use Prettier for consistent formatting
+- Configure in `.prettierrc`
+- Auto-format on save
 
 ### Code Review Checklist
 - Follows coding standards
@@ -314,7 +329,54 @@ test/
 - Performance considered
 
 ### Documentation
-- Godoc comments for exported functions
+- JSDoc comments for exported functions
 - README with setup instructions
-- API documentation (Swagger)
+- API documentation (OpenAPI)
 - Architecture documentation (Memory Bank)
+
+## TypeScript Best Practices
+
+### Type Safety
+- Enable strict mode in tsconfig.json
+- Use explicit return types for functions
+- Avoid `any` type
+- Use `unknown` for truly unknown data
+- Leverage type inference where appropriate
+
+### Async Patterns
+- Use async/await over Promises
+- Handle errors with try/catch
+- Use Promise.all for parallel operations
+- Consider AbortController for cancellation
+
+### Module System
+- Use ES modules (import/export)
+- Avoid default exports
+- Use named exports for better tree-shaking
+- Keep barrel files (index.ts) for clean imports
+
+### Error Handling
+- Create custom error classes
+- Use error codes for internationalization
+- Include context in error messages
+- Don't expose sensitive data in errors
+
+## Bun Specific Guidelines
+
+### Performance
+- Leverage Bun's fast startup time
+- Use Bun's built-in test runner
+- Take advantage of Bun's native APIs
+- Use Bun's file system API for I/O
+
+### Compatibility
+- Ensure Node.js compatibility when needed
+- Use Bun's polyfills for web APIs
+- Test in both Bun and Node.js environments
+- Be aware of Bun-specific APIs
+
+### Development
+- Use `bun run` for scripts
+- Use `bun install` for dependencies
+- Use `bun test` for testing
+- Use `bun build` for production builds

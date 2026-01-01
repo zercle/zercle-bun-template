@@ -5,12 +5,12 @@ Clean Architecture with Domain-Driven Design (DDD) principles.
 
 ## Layer Structure
 
-### 1. Domain Layer (`internal/domain/`)
+### 1. Domain Layer (`src/domain/`)
 **Purpose:** Core business logic and entities, independent of infrastructure.
 
 **Components per Domain:**
 - `entity/` - Business entities with domain logic
-- `interface.go` - Domain interfaces (Repository, Service, Handler)
+- `interface.ts` - Domain interfaces (Repository, Service, Handler)
 - `repository/` - Repository implementations
 - `usecase/` - Business logic and orchestration
 - `handler/` - HTTP request handlers
@@ -22,32 +22,32 @@ Clean Architecture with Domain-Driven Design (DDD) principles.
 - `user/` - User authentication and profile management
 - `task/` - Task management (example domain)
 
-### 2. Infrastructure Layer (`internal/infrastructure/`)
+### 2. Infrastructure Layer (`src/infrastructure/`)
 **Purpose:** External concerns and technical implementations.
 
 **Sub-packages:**
-- `config/` - Configuration management with Viper
+- `config/` - Configuration management with dotenv/config
 - `db/` - Database abstraction and factory
-- `http/client/` - HTTP client (Resty wrapper)
-- `logger/` - Structured logging (zerolog wrapper)
+- `http/client/` - HTTP client wrapper
+- `logger/` - Structured logging (pino wrapper)
 - `password/` - Password hashing (Argon2id)
-- `sqlc/db/` - SQLC-generated database code
+- `drizzle/` - Drizzle ORM database code
 
-### 3. Application Layer (`internal/app/`)
+### 3. Application Layer (`src/app/`)
 **Purpose:** Application orchestration and dependency injection.
 
 **Key Components:**
-- `app.go` - Main application structure
+- `app.ts` - Main application structure
 - Dependency wiring
 - Middleware setup
 - Route registration
 - Server lifecycle management
 
-### 4. Entry Point (`cmd/server/`)
+### 4. Entry Point (`src/`)
 **Purpose:** Application bootstrap.
 
 **Components:**
-- `main.go` - Application initialization and startup
+- `index.ts` - Application initialization and startup
 
 ## Component Boundaries
 
@@ -69,11 +69,11 @@ Clean Architecture with Domain-Driven Design (DDD) principles.
 ```
 Client → Handler → UseCase → Repository → Database
          ↓         ↓          ↓
-    Request   Business    Data Access
-    DTO       Logic       Layer
+     Request   Business    Data Access
+     DTO       Logic       Layer
          ↓         ↓          ↓
-    Response  Entity    SQLC Query
-    DTO       Mapping    Generation
+     Response  Entity    Drizzle Query
+     DTO       Mapping    ORM
 ```
 
 ### Authentication Flow
@@ -100,10 +100,10 @@ Client → Handler → UseCase → Repository → Database
 - Mock implementations for testing
 
 ### Database Access Patterns
-- SQLC generates type-safe queries
+- Drizzle ORM provides type-safe queries
 - Repository pattern abstracts database
 - Transactions managed at repository level
-- Connection pooling handled by pgx/v5
+- Connection pooling handled by pg (node-postgres)
 
 ### Error Handling Strategy
 - Domain-specific errors in usecase layer
@@ -120,7 +120,7 @@ Client → Handler → UseCase → Repository → Database
 
 ### API Integration
 - RESTful API endpoints
-- Swagger documentation at `/swagger/*`
+- OpenAPI documentation at `/swagger/*` or `/docs`
 - Health checks at `/health` and `/readiness`
 
 ## Scalability Considerations
@@ -146,7 +146,6 @@ Client → Handler → UseCase → Repository → Database
 - Health checks for orchestration
 
 ### Configuration Management
-- YAML configuration files per environment
-- Environment variable overrides
-- Viper for configuration loading
-- Type-safe configuration structs
+- Environment variable configuration
+- dotenv/config for configuration loading
+- Type-safe configuration with Zod schemas
