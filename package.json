@@ -1,0 +1,60 @@
+{
+  "name": "zercle-bun-template",
+  "version": "1.0.0",
+  "description": "Production-ready RESTful API template built with Bun runtime and Hono framework",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/main.ts",
+    "start": "bun run src/main.ts",
+    "build": "bun build src/main.ts --outdir ./dist",
+    "test": "bun test",
+    "test:integration": "bun test --envfile .env.test tests/integration/",
+    "test:coverage": "bun test --coverage",
+    "test:db:start": "podman-compose -f deployments/docker/docker-compose.test.yml up -d",
+    "test:db:stop": "podman-compose -f deployments/docker/docker-compose.test.yml down -v",
+    "test:db:migrate": "bunx drizzle-kit migrate --config drizzle.config.ts",
+    "test:db:health": "bun tests/integration/setup.ts --health-check",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "bunx drizzle-kit generate",
+    "db:push": "bunx drizzle-kit push",
+    "db:studio": "bunx drizzle-kit studio",
+    "db:migrate": "bunx drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@hono/zod-validator": "^0.4.1",
+    "argon2": "^0.40.3",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.36.0",
+    "hono": "^4.6.0",
+    "js-yaml": "^4.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1",
+    "pino": "^9.6.0",
+    "postgres": "^3.4.7",
+    "uuid": "^11.0.3",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.51.0",
+    "@typescript-eslint/parser": "^8.51.0",
+    "bun-types": "latest",
+    "drizzle-kit": "^0.29.1",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.51.0"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

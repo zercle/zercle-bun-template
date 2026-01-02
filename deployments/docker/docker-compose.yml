@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: mirror.gcr.io/postgres:18-alpine
+    container_name: zercle-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+    container_name: zercle-bun-app
+    environment:
+      SERVER_ENV: prod
+      SERVER_PORT: 3000
+      SERVER_HOST: 0.0.0.0
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: postgres
+      DB_DRIVER: postgres
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      JWT_EXPIRATION: 3600
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      RATE_LIMIT_REQUESTS: 100
+      RATE_LIMIT_WINDOW: 60
+      ARGON2ID_MEMORY: 19456
+      ARGON2ID_ITERATIONS: 2
+      ARGON2ID_PARALLELISM: 1
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
