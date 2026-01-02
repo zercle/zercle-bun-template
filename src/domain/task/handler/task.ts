@@ -11,10 +11,8 @@ import {
   forbidden,
   internalError,
 } from "../../../utils/response.js";
-import {
-  getRequestID,
-  getUserId,
-} from "../../../infrastructure/middleware/auth.js";
+import { getUserId } from "../../../infrastructure/middleware/auth.js";
+import { getRequestID } from "../../../infrastructure/middleware/request-id.js";
 import type { Logger } from "../../../infrastructure/logger/logger.js";
 
 export class TaskHandler {
