@@ -1,56 +1,58 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  api:
-    build: .
-    container_name: zercle-api
-    ports:
-      - "3000:3000"
-    environment:
-      TZ: Asia/Bangkok
-      LANG: C.UTF-8
-      SERVER_ENV: local
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: postgres
-      JWT_SECRET: your-super-secret-jwt-key-for-development-only-123
-      LOG_LEVEL: debug
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - zercle-network
-    restart: unless-stopped
-
   postgres:
-    image: postgres:18-alpine
+    image: postgres:15-alpine
     container_name: zercle-postgres
     environment:
-      TZ: Asia/Bangkok
-      LANG: C.UTF-8
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ../../sqlc/migrations:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - zercle-network
-    restart: unless-stopped
+
+  app:
+    build:
+      context: ../..
+      dockerfile: deployments/docker/Dockerfile
+    container_name: zercle-bun-app
+    environment:
+      SERVER_ENV: prod
+      SERVER_PORT: 3000
+      SERVER_HOST: 0.0.0.0
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: postgres
+      DB_DRIVER: postgres
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      JWT_EXPIRATION: 3600
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      RATE_LIMIT_REQUESTS: 100
+      RATE_LIMIT_WINDOW: 60
+      ARGON2ID_MEMORY: 19456
+      ARGON2ID_ITERATIONS: 2
+      ARGON2ID_PARALLELISM: 1
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
-  postgres-data:
-    driver: local
-
-networks:
-  zercle-network:
-    driver: bridge
+  postgres_data:

@@ -16,7 +16,7 @@ permissions:
   pull-requests: read
 
 env:
-  GO_VERSION: "stable"
+  BUN_VERSION: "latest"
   POSTGRES_VERSION: "18"
 
 jobs:
@@ -27,16 +27,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          go-version: ${{ env.GO_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
           cache: true
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
-        with:
-          version: latest
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run ESLint
+        run: bun run lint
 
   security:
     name: Security Scan
@@ -45,22 +46,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          go-version: ${{ env.GO_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
           cache: true
 
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
-        with:
-          args: "-no-fail -fmt sarif -out results.sarif ./..."
+      - name: Install dependencies
+        run: bun install
 
-      - name: Upload Gosec results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: results.sarif
+      - name: Run Bun Audit
+        run: bun audit
 
   format:
     name: Check Format
@@ -69,19 +65,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          go-version: ${{ env.GO_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
           cache: true
 
+      - name: Install dependencies
+        run: bun install
+
       - name: Check code formatting
-        run: |
-          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-            echo "The following files are not formatted:"
-            gofmt -s -l .
-            exit 1
-          fi
+        run: bun run format:check
 
   generate:
     name: Code Generation
@@ -90,35 +84,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          go-version: ${{ env.GO_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
           cache: true
 
-      - name: Install tools
-        run: |
-          go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-          go install github.com/swaggo/swag/cmd/swag@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Install dependencies
+        run: bun install
 
-      - name: Generate code
-        run: make generate
+      - name: Generate database code
+        run: bun run db:generate
 
       - name: Check for uncommitted changes
         run: |
-          git diff --exit-code || (echo "Generated code is out of date. Run 'make generate' and commit the changes."; exit 1)
-
-      - name: Verify swagger docs exist
-        run: |
-          if [ ! -f "docs/swagger.json" ]; then
-            echo "Error: docs/swagger.json not found"
-            exit 1
-          fi
-          if [ ! -f "docs/swagger.yaml" ]; then
-            echo "Error: docs/swagger.yaml not found"
-            exit 1
-          fi
+          git diff --exit-code || (echo "Generated code is out of date. Run 'bun run db:generate' and commit the changes."; exit 1)
 
   test-unit:
     name: Unit Tests
@@ -127,14 +107,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          go-version: ${{ env.GO_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
           cache: true
 
+      - name: Install dependencies
+        run: bun install
+
       - name: Run unit tests
-        run: make test-unit
+        run: bun test
 
   test-integration:
     name: Integration Tests
@@ -143,17 +126,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          go-version: ${{ env.GO_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
           cache: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Install dependencies
+        run: bun install
+
       - name: Run integration tests
-        run: make test-integration
+        run: bun test
 
   test-coverage:
     name: Test Coverage
@@ -162,19 +148,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          go-version: ${{ env.GO_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
           cache: true
 
+      - name: Install dependencies
+        run: bun install
+
       - name: Run tests with coverage
-        run: make test-all
+        run: bun run test:coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: ./coverage.out
+          files: ./coverage.lcov
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
@@ -187,23 +176,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Set up Go
-        uses: actions/setup-go@v6
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          go-version: ${{ env.GO_VERSION }}
+          bun-version: ${{ env.BUN_VERSION }}
           cache: true
 
+      - name: Install dependencies
+        run: bun install
+
       - name: Build application
-        run: make build
+        run: bun run build
 
-      - name: Build with all tags
-        run: make build-all
-
-      - name: Upload binary artifacts
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: binary
-          path: bin/service
+          name: dist
+          path: dist/
           retention-days: 7
 
   docker:
@@ -219,5 +208,5 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t zercle-go-template:test -f deployments/docker/Dockerfile .
-          docker images zercle-go-template:test
+          docker build -t zercle-bun-template:test -f deployments/docker/Dockerfile .
+          docker images zercle-bun-template:test

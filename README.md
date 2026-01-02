@@ -1,471 +1,673 @@
 # Zercle Bun Template
 
-A production-ready RESTful API template built with Bun runtime and Hono framework, featuring clean architecture, JWT authentication, and PostgreSQL database. This template provides a solid foundation for building Bun microservices or REST APIs with best practices already implemented.
+<div align="center">
+
+![Bun](https://img.shields.io/badge/Bun-1.0.0-black?style=for-the-badge&logo=bun)
+![Hono](https://img.shields.io/badge/Hono-4.6.0-red?style=for-the-badge)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript)
+![Drizzle ORM](https://img.shields.io/badge/Drizzle%20ORM-0.36.0-purple?style=for-the-badge)
+![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)
+
+A production-ready RESTful API template built with **Bun runtime** and **Hono framework**. This template implements domain-driven design (DDD) architecture with clean separation of concerns, making it ideal for building scalable, maintainable backend services.
+
+[Features](#features) • [Tech Stack](#tech-stack) • [Project Structure](#project-structure) • [Quick Start](#quick-start) • [Documentation](#documentation)
+
+</div>
+
+---
 
 ## Features
 
-- **Clean Architecture** - Domain-driven design with clear separation of concerns
-- **Type-safe Database Operations** - Drizzle ORM for type-safe database queries
-- **JWT Authentication** - Stateless authentication with configurable expiration
-- **Password Security** - Argon2id hashing for secure password storage
-- **Comprehensive Testing** - Unit, integration, and mock testing infrastructure
-- **API Documentation** - Swagger/OpenAPI documentation out of the box
-- **Structured Logging** - Pino for high-performance JSON logging
-- **Docker Support** - Containerized deployment with Docker Compose
-- **Rate Limiting** - Configurable request rate limiting
-- **CORS Support** - Configurable cross-origin resource sharing
-- **Health Checks** - Application and readiness endpoints
+- 🚀 **High Performance**: Built on Bun, the fastest JavaScript runtime
+- 🎯 **Domain-Driven Design**: Clean architecture with separated domains, infrastructure, and utilities
+- 🔐 **Secure Authentication**: JWT-based auth with Argon2id password hashing
+- 📊 **Database Integration**: Drizzle ORM with PostgreSQL and type-safe migrations
+- 🛡️ **Security Middleware**: CORS, rate limiting, request ID tracking, and JWT verification
+- 📝 **TypeScript**: Full type safety with strict mode enabled
+- 🐳 **Docker Ready**: Production-ready Docker configuration with docker-compose
+- 📊 **Structured Logging**: Pino-based logging with configurable formats
+- ✅ **API Response Format**: Consistent JSend-style response structure
+- 🔧 **Configuration Management**: YAML-based config with environment variable overrides
 
 ## Tech Stack
 
-- **Language**: TypeScript 5.x
-- **Runtime**: Bun 1.0.0+
-- **Web Framework**: Hono
-- **Database**: PostgreSQL 12+ with pg (node-postgres)
-- **ORM/Query Builder**: Drizzle ORM
-- **Authentication**: JWT (jose)
-- **Password Hashing**: Argon2id (argon2 npm package)
-- **Configuration**: dotenv/config
-- **Logging**: Pino
-- **Validation**: Zod
-- **Documentation**: OpenAPI tools for TypeScript
-- **Testing**: bun test, vi, testcontainers-node
+| Category | Technology |
+|----------|------------|
+| Runtime | [Bun](https://bun.sh/) v1.0.0+ |
+| Framework | [Hono](https://hono.dev/) v4.6.0 |
+| Language | [TypeScript](https://www.typescriptlang.org/) v5.7 |
+| Database | [PostgreSQL](https://www.postgresql.org/) with [Drizzle ORM](https://orm.drizzle.team/) v0.36.0 |
+| Authentication | [JWT](https://jwt.io/) + [Argon2id](https://github.com/ranisalt/node-argon2) |
+| Validation | [Zod](https://zod.dev/) v3.24 |
+| Logging | [Pino](https://getpino.io/) v9.6 |
+| Configuration | [js-yaml](https://github.com/nodeca/js-yaml) v4.1 |
+| Docker | [Docker](https://www.docker.com/) + [docker-compose](https://docs.docker.com/compose/) |
 
 ## Project Structure
 
 ```
-.
-├── src/
-│   ├── index.ts                 # Application entry point
-│   ├── app/
-│   │   └── app.ts               # Application orchestration & DI
-│   ├── domain/
-│   │   ├── user/                # User domain (example)
-│   │   │   ├── entity/          # Business entities
-│   │   │   ├── handler/         # HTTP handlers
-│   │   │   ├── repository/      # Data access layer
-│   │   │   ├── usecase/         # Business logic
-│   │   │   ├── request/         # Request DTOs
-│   │   │   ├── response/        # Response DTOs
-│   │   │   ├── mock/            # Mock implementations
-│   │   │   └── interface.ts     # Domain interfaces
-│   │   └── task/                # Task domain (example)
-│   └── infrastructure/
-│       ├── config/              # Configuration management
-│       ├── db/                  # Database abstraction
-│       ├── http/                # HTTP client
-│       ├── logger/              # Structured logging
-│       └── password/            # Password hashing
-├── drizzle/
-│   ├── migrations/              # Database migrations
-│   └── schema.ts                # Drizzle schema definitions
-├── configs/
-│   ├── local.yaml               # Local development config
-│   ├── dev.yaml                 # Development config
-│   ├── uat.yaml                 # UAT config
-│   └── prod.yaml                # Production config
-├── test/
-│   ├── integration/             # Integration tests
-│   └── mock/                    # Mock utilities
-├── scripts/
-│   ├── run-dev.sh               # Development runner
-│   └── seed-db.sh               # Database seeding
-├── deployments/
+zercle-bun-template/
+├── .env.example              # Environment variables template
+├── .gitignore                # Git ignore rules
+├── drizzle.config.ts         # Drizzle ORM configuration
+├── package.json              # Project dependencies and scripts
+├── tsconfig.json             # TypeScript configuration
+├── LICENSE.md                # License file
+│
+├── configs/                  # Configuration files by environment
+│   ├── dev.yaml             # Development configuration
+│   ├── local.yaml           # Local development configuration
+│   ├── prod.yaml            # Production configuration
+│   └── uat.yaml             # User acceptance testing configuration
+│
+├── deployments/              # Deployment configurations
 │   └── docker/
-│       ├── Dockerfile           # Docker image
-│       └── docker-compose.yml   # Docker Compose setup
-├── docs/                        # OpenAPI documentation
-├── .env.example                 # Environment variables template
-├── package.json                 # Dependencies and scripts
-├── tsconfig.json                # TypeScript configuration
-├── drizzle.config.ts            # Drizzle ORM configuration
-├── bun.lockb                    # Bun lockfile
-└── eslint.config.js             # ESLint configuration
+│       ├── Dockerfile       # Multi-stage Docker build
+│       └── docker-compose.yml # Docker Compose for local development
+│
+├── drizzle/                  # Database migrations
+│   └── migrations/          # Generated migration files
+│       └── *_initial_schema.sql
+│
+├── scripts/                  # Utility scripts
+│
+└── src/                      # Source code
+    ├── main.ts              # Application entry point
+    ├── app.ts               # App initialization and route setup
+    │
+    ├── domain/              # Business logic (DDD)
+    │   ├── task/            # Task domain
+    │   │   ├── entity/      # Domain entities (Task model)
+    │   │   ├── handler/     # HTTP handlers/controllers
+    │   │   ├── repository/  # Data access layer
+    │   │   ├── request/     # Request validation schemas
+    │   │   ├── response/    # Response types
+    │   │   └── usecase/     # Business logic use cases
+    │   │
+    │   └── user/            # User domain
+    │       ├── entity/      # Domain entities (User model)
+    │       ├── handler/     # HTTP handlers/controllers
+    │       ├── repository/  # Data access layer
+    │       ├── request/     # Request validation schemas
+    │       ├── response/    # Response types
+    │       └── usecase/     # Business logic use cases
+    │
+    ├── infrastructure/      # Infrastructure layer
+    │   ├── config/          # Configuration loading and validation
+    │   ├── db/              # Database connection and setup
+    │   ├── logger/          # Logging service
+    │   ├── middleware/      # HTTP middleware
+    │   │   ├── auth.ts      # JWT authentication
+    │   │   ├── cors.ts      # CORS handling
+    │   │   ├── logger.ts    # Request/response logging
+    │   │   ├── rate-limit.ts # Rate limiting
+    │   │   └── request-id.ts # Request ID generation
+    │   └── password/        # Password hashing (Argon2id)
+    │
+    └── utils/               # Utility functions
+        └── response.ts      # JSend-formatted response helpers
 ```
 
-## Architecture
+### Architecture Overview
 
-This template follows **Clean Architecture** with **Domain-Driven Design (DDD)** principles:
-
-### Layers
-
-1. **Domain Layer** (`src/domain/`) - Core business logic and entities, independent of infrastructure
-2. **Infrastructure Layer** (`src/infrastructure/`) - External concerns and technical implementations
-3. **Application Layer** (`src/app/`) - Application orchestration and dependency injection
-4. **Entry Point** (`src/index.ts`) - Application bootstrap
-
-### Data Flow
+This template follows **Domain-Driven Design (DDD)** principles with a clear separation of layers:
 
 ```
-Client → Handler → UseCase → Repository → Database
-         ↓         ↓          ↓
-     Request   Business    Data Access
-     DTO       Logic       Layer
+┌─────────────────────────────────────────────────────────────┐
+│                      Presentation Layer                      │
+│                   (Handlers / Controllers)                   │
+├─────────────────────────────────────────────────────────────┤
+│                      Application Layer                       │
+│                      (Use Cases)                             │
+├─────────────────────────────────────────────────────────────┤
+│                      Domain Layer                            │
+│                   (Entities / Business Logic)                │
+├─────────────────────────────────────────────────────────────┤
+│                     Infrastructure Layer                     │
+│              (DB, Auth, Config, Middleware)                  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Getting Started
+## Prerequisites
 
-### Prerequisites
+Before using this template, ensure you have the following installed:
 
-- Bun 1.0.0 or higher
-- Node.js 18+ (for some development tools)
-- PostgreSQL 12+
-- Docker (optional, for containerized deployment)
+- **Bun** v1.0.0 or higher - [Install](https://bun.sh/docs/installation)
+- **Node.js** v18 or higher (for some tooling)
+- **PostgreSQL** v15+ (or use Docker)
+- **Git** for version control
 
-### Installation
+## Quick Start
 
-1. Clone the repository:
+### 1. Clone and Install Dependencies
+
 ```bash
-git clone https://github.com/zercle/zercle-bun-template.git
+# Clone the repository
+git clone <your-repo-url>
 cd zercle-bun-template
-```
 
-2. Copy environment variables:
-```bash
-cp .env.example .env
-```
-
-3. Install dependencies:
-```bash
+# Install dependencies
 bun install
 ```
 
-4. Configure database connection in `.env` or `configs/local.yaml`
-
-5. Run database migrations:
-```bash
-bunx drizzle-kit push
-```
-
-6. Generate Drizzle client:
-```bash
-bunx drizzle-kit generate
-```
-
-7. Generate OpenAPI documentation:
-```bash
-bun run docs:generate
-```
-
-### Running the Application
-
-#### Development
+### 2. Configure Environment
 
 ```bash
-# Set environment
-export SERVER_ENV=local
+# Copy environment template
+cp .env.example .env
 
-# Run the application
-bun run src/index.ts
+# Edit environment variables
+nano .env
 ```
 
-Or use the provided script:
-```bash
-./scripts/run-dev.sh
-```
+### 3. Set Up Database
 
-#### Production
+**Option A: Using Docker Compose (Recommended)**
 
 ```bash
-# Build the application
-bun build src/index.ts --outdir ./dist
+# Start PostgreSQL container
+docker-compose -f deployments/docker/docker-compose.yml up -d postgres
 
-# Run the built application
-bun run dist/index.js
+# Run database migrations
+bun run db:migrate
 ```
 
-#### Docker
+**Option B: Local PostgreSQL**
+
+Ensure PostgreSQL is running locally, then:
 
 ```bash
-# Build Docker image
-docker build -t zercle-bun-template .
-
-# Run container
-docker run -p 3000:3000 \
-  -e SERVER_ENV=prod \
-  -e DATABASE_URL=postgres://user:pass@host:5432/dbname \
-  zercle-bun-template
+# Run migrations
+bun run db:migrate
 ```
 
-#### Docker Compose
+### 4. Start Development Server
 
 ```bash
-# Start all services
-docker compose up -d
-
-# View logs
-docker compose logs -f
-
-# Stop services
-docker compose down
+# Start with hot reload
+bun run dev
 ```
+
+The server will start at `http://localhost:3000`.
 
 ## Configuration
 
-Configuration is managed through YAML files in the `configs/` directory:
+### Environment Variables
 
-- `local.yaml` - Local development
-- `dev.yaml` - Development environment
-- `uat.yaml` - User acceptance testing
-- `prod.yaml` - Production
+Configure your application using environment variables or `.env` file:
 
-Environment variables can override configuration values. Set `SERVER_ENV` to select the configuration file.
+```env
+# Server Configuration
+SERVER_ENV=local
+SERVER_PORT=3000
+SERVER_HOST=0.0.0.0
 
-### Key Configuration Sections
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=postgres
+DB_DRIVER=postgres
 
-- **Database**: Connection string, pool settings
-- **JWT**: Secret key, expiration time
-- **Server**: Port, timeout settings
-- **Logging**: Level, format, output
-- **CORS**: Allowed origins, methods, headers
-- **Rate Limiting**: Requests per window, window duration
+# JWT Configuration
+JWT_SECRET=your-secret-key-change-in-production
+JWT_EXPIRATION=3600
+
+# Logging Configuration
+LOG_LEVEL=info
+LOG_FORMAT=json
+
+# CORS Configuration
+# CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
+
+# Rate Limiting Configuration
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW=60
+
+# Argon2id Configuration
+ARGON2ID_MEMORY=19456
+ARGON2ID_ITERATIONS=2
+ARGON2ID_PARALLELISM=1
+```
+
+### YAML Configuration Files
+
+The application uses YAML configuration files per environment:
+
+| File | Environment | Description |
+|------|-------------|-------------|
+| `configs/local.yaml` | Local | Local development settings |
+| `configs/dev.yaml` | Development | Development environment |
+| `configs/uat.yaml` | UAT | User acceptance testing |
+| `configs/prod.yaml` | Production | Production settings |
+
+To change the active environment, set `SERVER_ENV`:
+
+```bash
+SERVER_ENV=dev bun run dev
+```
+
+## Database Setup
+
+### Database Migrations
+
+```bash
+# Generate a new migration (after schema changes)
+bun run db:generate
+
+# Push schema changes (development only)
+bun run db:push
+
+# Run all migrations
+bun run db:migrate
+
+# Open Drizzle Studio (database GUI)
+bun run db:studio
+```
+
+### Database Schema
+
+The database schema is defined in [`src/infrastructure/db/drizzle.ts`](src/infrastructure/db/drizzle.ts). After making changes:
+
+1. Update the schema file
+2. Run `bun run db:generate` to create a new migration
+3. Review the generated SQL in `drizzle/migrations/`
+4. Run `bun run db:migrate` to apply
+
+## Running the Application
+
+### Development Mode
+
+```bash
+# Start with hot reload
+bun run dev
+```
+
+### Production Mode
+
+```bash
+# Build the application
+bun run build
+
+# Start production server
+bun run start
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+bun run test
+
+# Run tests with coverage
+bun run test:coverage
+```
+
+### Linting and Formatting
+
+```bash
+# Check code style
+bun run lint
+bun run format:check
+
+# Auto-fix issues
+bun run lint:fix
+bun run format
+```
 
 ## API Documentation
 
-Once the application is running, access the Swagger documentation at:
+### Base URL
 
 ```
-http://localhost:3000/swagger/index.html
+http://localhost:3000
 ```
 
-### Available Endpoints
+### Health Check Endpoints
 
-#### Health Checks
-- `GET /health` - Application health check
-- `GET /readiness` - Readiness probe
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Application health check |
+| GET | `/readiness` | Readiness probe (checks DB connection) |
 
-#### Authentication
-- `POST /api/v1/auth/register` - User registration
-- `POST /api/v1/auth/login` - User login
+### Authentication Endpoints
 
-#### User Management
-- `GET /api/v1/users` - List users (paginated)
-- `GET /api/v1/users/:id` - Get user profile
-- `PUT /api/v1/users/:id` - Update user profile (protected)
-- `DELETE /api/v1/users/:id` - Delete account (protected)
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/v1/auth/register` | ❌ | Register a new user |
+| POST | `/api/v1/auth/login` | ❌ | Login and get JWT token |
 
-#### Task Management (Example Domain)
-- `POST /api/v1/tasks` - Create task (protected)
-- `GET /api/v1/tasks` - List tasks (protected, paginated)
-- `GET /api/v1/tasks/:id` - Get task (protected)
-- `PUT /api/v1/tasks/:id` - Update task (protected)
-- `DELETE /api/v1/tasks/:id` - Delete task (protected)
+### User Endpoints
 
-## Testing
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/v1/users/profile` | ✅ | Get current user profile |
+| PUT | `/api/v1/users/profile` | ✅ | Update user profile |
+| DELETE | `/api/v1/users/profile` | ✅ | Delete user account |
+| GET | `/api/v1/users` | ✅ | List all users (paginated) |
 
-### Run All Tests
+### Task Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/v1/tasks` | ✅ | Create a new task |
+| GET | `/api/v1/tasks` | ✅ | List all tasks (paginated) |
+| GET | `/api/v1/tasks/:id` | ✅ | Get task by ID |
+| PUT | `/api/v1/tasks/:id` | ✅ | Update a task |
+| DELETE | `/api/v1/tasks/:id` | ✅ | Delete a task |
+
+### Request/Response Examples
+
+**Register User**
+
+```http
+POST /api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securePassword123",
+  "fullName": "John Doe",
+  "phone": "+1234567890"
+}
+```
+
+**Response (201 Created)**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "fullName": "John Doe",
+    "isActive": true,
+    "createdAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Login**
+
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}
+```
+
+**Response (200 OK)**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIs...",
+    "expiresIn": 3600
+  }
+}
+```
+
+### Error Response Format
+
+All errors follow the JSend specification:
+
+```json
+{
+  "status": "fail",
+  "message": "User not found",
+  "data": {
+    "field": ["error message"]
+  }
+}
+```
+
+## Docker Deployment
+
+### Building the Image
 
 ```bash
-bun test
+# Build the Docker image
+docker build -f deployments/docker/Dockerfile -t zercle-bun-app .
 ```
 
-### Run Tests with Coverage
+### Running with Docker Compose
 
 ```bash
-bun test --coverage
+# Start all services (app + database)
+docker-compose -f deployments/docker/docker-compose.yml up -d
+
+# View logs
+docker-compose -f deployments/docker/docker-compose.yml logs -f
+
+# Stop services
+docker-compose -f deployments/docker/docker-compose.yml down
 ```
 
-### Generate Coverage Report
+### Production Deployment
 
 ```bash
-bun test --coverage
+# Set production environment variables
+export JWT_SECRET="your-production-secret"
+export SERVER_ENV=prod
+
+# Build and run
+docker-compose -f deployments/docker/docker-compose.yml up -d --build
 ```
 
-### Run Integration Tests
+### Health Checks
 
-```bash
-bun test test/integration/*.test.ts
-```
+The Docker configuration includes health checks for both the application and database:
 
-### Run Specific Test
-
-```bash
-bun test test/unit/user/usecase.test.ts -t "TestLogin"
-```
+- **Application Health**: `curl -f http://localhost:3000/health`
+- **Database Health**: `pg_isready -U postgres`
 
 ## Development Guidelines
 
 ### Adding a New Domain
 
-1. Create domain structure under `src/domain/<domain>/`
-2. Define entity in `entity/` directory
-3. Create interfaces in `interface.ts`
-4. Implement repository, usecase, and handler
-5. Add request/response DTOs
-6. Write tests
-7. Wire dependencies in `src/app/app.ts`
-8. Register routes
-9. Update OpenAPI documentation
+To add a new domain (e.g., `order`):
+
+1. **Create the domain structure:**
+
+```bash
+mkdir -p src/domain/order/{entity,handler,repository,request,response,usecase}
+```
+
+2. **Define the entity:**
+
+```typescript
+// src/domain/order/entity/order.ts
+export interface Order {
+  id: string;
+  userId: string;
+  status: OrderStatus;
+  totalAmount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateOrder {
+  userId: string;
+  items: OrderItem[];
+}
+```
+
+3. **Create the repository:**
+
+```typescript
+// src/domain/order/repository/order.ts
+import { DrizzleDatabase } from '../../../infrastructure/db/drizzle.js';
+import { Logger } from '../../../infrastructure/logger/logger.js';
+import { Order } from '../entity/order.js';
+
+export class OrderRepository {
+  constructor(private db: DrizzleDatabase, private logger: Logger) {}
+
+  async findById(id: string): Promise<Order | null> {
+    // Implementation
+  }
+
+  async create(order: Order): Promise<Order> {
+    // Implementation
+  }
+}
+```
+
+4. **Implement use cases:**
+
+```typescript
+// src/domain/order/usecase/order.ts
+export interface IOrderUseCase {
+  createOrder(data: CreateOrder): Promise<Order>;
+  getOrder(id: string): Promise<Order>;
+}
+
+export class OrderUseCase implements IOrderUseCase {
+  // Implementation
+}
+```
+
+5. **Create request validation:**
+
+```typescript
+// src/domain/order/request/order.ts
+import { z } from 'zod';
+
+export const createOrderSchema = z.object({
+  userId: z.string().uuid(),
+  items: z.array(z.object({
+    productId: z.string().uuid(),
+    quantity: z.number().positive(),
+  })),
+});
+```
+
+6. **Create HTTP handler:**
+
+```typescript
+// src/domain/order/handler/order.ts
+import { Context } from 'hono';
+import { IOrderUseCase } from '../usecase/order.js';
+import { success, created } from '../../../utils/response.js';
+
+export class OrderHandler {
+  constructor(private useCase: IOrderUseCase) {}
+
+  async createOrder(c: Context) {
+    const body = await c.req.json();
+    const validatedData = createOrderSchema.parse(body);
+    const order = await this.useCase.createOrder(validatedData);
+    return created(c, order);
+  }
+}
+```
+
+7. **Register routes in `app.ts`:**
+
+```typescript
+// In setupDependencies()
+const orderRepo = new OrderRepository(this.db, this.logger);
+const orderUseCase = new OrderUseCase(orderRepo, this.logger);
+const orderHandler = new OrderHandler(orderUseCase);
+
+// In registerOrderRoutes()
+private registerOrderRoutes(handler: OrderHandler) {
+  const protectedRoutes = this.hono.basePath('/api/v1');
+  protectedRoutes.use('/orders*', createAuthMiddleware(this.config.jwt));
+  
+  protectedRoutes.post('/orders', (c) => handler.createOrder(c));
+  protectedRoutes.get('/orders/:id', (c) => handler.getOrder(c));
+}
+```
 
 ### Code Style
 
-- Follow TypeScript standard formatting
-- Use ESLint and Prettier for linting
-- Write JSDoc comments for exported functions
-- Keep functions under 50 lines when possible
-- Follow SOLID principles
+- Use **ES modules** (`import`/`export`)
+- Follow **strict TypeScript** mode
+- Use **Zod** for input validation
+- Return **JSend-formatted** responses
+- Use **async/await** for all async operations
+- Implement **proper error handling** with typed errors
 
-### Testing Standards
+### Naming Conventions
 
-- Write unit tests for business logic
-- Use table-driven tests for multiple scenarios
-- Mock external dependencies with vi
-- Aim for >80% coverage on critical paths
-- Test error paths, not just happy paths
+| Component | Convention | Example |
+|-----------|------------|---------|
+| Files | kebab-case | `user-handler.ts` |
+| Classes | PascalCase | `UserRepository` |
+| Interfaces | PascalCase | `IUserService` |
+| Variables/Functions | camelCase | `getUserById` |
+| Constants | UPPER_SNAKE_CASE | `MAX_REQUESTS` |
+| Database Tables | snake_case | `user_accounts` |
 
-### Database Migrations
+## Testing
 
-1. Create migration files in `drizzle/migrations/`
-2. Format: `YYYYMMDD_NNN_description`
-3. Write both up and down migrations
-4. Apply migrations with Drizzle Kit
-5. Regenerate Drizzle client: `bunx drizzle-kit generate`
+### Writing Tests
 
-## Common Commands
+Create test files with `.test.ts` extension:
 
-### Linting
+```typescript
+// src/domain/user/usecase/user.test.ts
+import { describe, it, expect } from 'bun:test';
 
-```bash
-# Run linter
-bunx eslint .
-
-# Fix issues automatically
-bunx eslint . --fix
+describe('User UseCase', () => {
+  it('should register a new user', async () => {
+    // Test implementation
+  });
+});
 ```
 
-### Formatting
+### Running Tests
 
 ```bash
-# Format code
-bunx prettier --write .
+# Run all tests
+bun test
 
-# Check for issues
-bunx prettier --check .
+# Run with coverage report
+bun run test:coverage
+
+# Run specific test file
+bun test src/domain/user/usecase/user.test.ts
 ```
-
-### Dependencies
-
-```bash
-# Install dependencies
-bun install
-
-# Add a dependency
-bun add <package-name>
-
-# Add a dev dependency
-bun add -d <package-name>
-
-# Update dependencies
-bun update
-```
-
-### Drizzle Kit
-
-```bash
-# Generate Drizzle client
-bunx drizzle-kit generate
-
-# Push schema changes to database
-bunx drizzle-kit push
-
-# Open Drizzle Studio
-bunx drizzle-kit studio
-```
-
-### Documentation
-
-```bash
-# Generate OpenAPI docs
-bun run docs:generate
-```
-
-## Environment Variables
-
-Key environment variables (see `.env.example`):
-
-- `SERVER_ENV` - Environment (local, dev, uat, prod)
-- `DATABASE_URL` - PostgreSQL connection string
-- `JWT_SECRET` - JWT signing secret
-- `JWT_EXPIRATION` - Token expiration time
-- `SERVER_PORT` - Server port (default: 3000)
-
-## Security
-
-- Passwords hashed with Argon2id
-- JWT tokens for stateless authentication
-- Input validation with Zod on all endpoints
-- CORS configuration per environment
-- Rate limiting to prevent abuse
-- SQL injection prevention via Drizzle ORM
-
-## Performance
-
-- Database connection pooling
-- Efficient query generation via Drizzle ORM
-- Structured logging with minimal overhead
-- Graceful shutdown handling
-- Configurable timeouts
-
-## Deployment
-
-### Production Checklist
-
-- [ ] Set strong JWT secret
-- [ ] Configure production database
-- [ ] Enable HTTPS/TLS
-- [ ] Set appropriate CORS origins
-- [ ] Configure rate limiting
-- [ ] Set log level to INFO or WARN
-- [ ] Enable health checks
-- [ ] Configure monitoring and alerting
-- [ ] Run database migrations
-- [ ] Test all endpoints
-
-### Docker Deployment
-
-The provided Dockerfile uses a multi-stage build for optimization:
-
-- Builder stage: Installs dependencies and builds the Bun application
-- Runtime stage: Minimal Bun-based image
-- Non-root user for security
-- Health checks configured
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit changes** (`git commit -m 'Add amazing feature'`)
+4. **Push to branch** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request**
 
-### Pull Request Guidelines
+### Commit Message Format
 
-- Follow existing code style
-- Add tests for new features
-- Update documentation
-- Ensure all tests pass
-- Run linter and fix issues
+```
+type(scope): description
+
+Types:
+- feat: New feature
+- fix: Bug fix
+- docs: Documentation changes
+- style: Code style changes
+- refactor: Code refactoring
+- test: Test additions
+- chore: Maintenance
+
+Example: feat(user): add password reset functionality
+```
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
-## Support
+---
 
-For issues, questions, or contributions, please visit the GitHub repository.
+<div align="center">
 
-## Roadmap
+Built with ❤️ using [Bun](https://bun.sh/) and [Hono](https://hono.dev/)
 
-Future enhancements planned:
-
-- [ ] Redis caching layer
-- [ ] Message queue integration (RabbitMQ/Kafka)
-- [ ] Metrics collection (Prometheus)
-- [ ] Distributed tracing (OpenTelemetry)
-- [ ] API versioning strategy
-- [ ] GraphQL support option
-- [ ] Additional example domains
-
-## Acknowledgments
-
-Built with best practices and modern Bun and TypeScript development tools. Special thanks to the open-source community for the excellent libraries and frameworks used in this project.
+</div>

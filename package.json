@@ -1,0 +1,50 @@
+{
+  "name": "zercle-bun-template",
+  "version": "1.0.0",
+  "description": "Production-ready RESTful API template built with Bun runtime and Hono framework",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/main.ts",
+    "start": "bun run src/main.ts",
+    "build": "bun build src/main.ts --outdir ./dist",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "bunx drizzle-kit generate",
+    "db:push": "bunx drizzle-kit push",
+    "db:studio": "bunx drizzle-kit studio",
+    "db:migrate": "bunx drizzle-kit migrate"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "drizzle-orm": "^0.36.0",
+    "pg": "^8.13.1",
+    "argon2": "^0.40.3",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.24.1",
+    "pino": "^9.6.0",
+    "js-yaml": "^4.1.0",
+    "dotenv": "^16.4.7",
+    "@hono/node-server": "^1.13.7",
+    "@hono/zod-validator": "^0.4.1",
+    "uuid": "^11.0.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/js-yaml": "^4.0.9",
+    "@types/uuid": "^10.0.0",
+    "@types/node": "^22.10.2",
+    "drizzle-kit": "^0.29.1",
+    "typescript": "^5.7.2",
+    "eslint": "^9.17.0",
+    "prettier": "^3.4.2",
+    "bun-types": "latest"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

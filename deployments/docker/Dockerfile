@@ -1,47 +1,45 @@
-# Multi-stage build for production-ready Go application
-FROM golang AS builder
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y git make tini
+# Build stage
+FROM oven/bun:1 AS builder
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
-RUN go mod download
+# Install dependencies
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile --production
 
 # Copy source code
 COPY . .
 
-# Build the application with optimization flags
-ARG BUILD_VERSION=dev
-ARG BUILD_TIME
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s -X main.Version=${BUILD_VERSION} -X main.BuildTime=${BUILD_TIME}" -o service ./cmd/server
+# Build the application
+RUN bun build src/main.ts --outdir ./dist
 
-# Build arguments: BUILD_VERSION=$(git rev-parse --short HEAD) BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+# Runtime stage
+FROM oven/bun:1 AS runtime
 
-# Final stage - distroless minimal runtime
-FROM gcr.io/distroless/static
+WORKDIR /app
 
-ENV TZ=Asia/Bangkok
-ENV LANG=C.UTF-8
+# Install runtime dependencies only
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile --production
 
-WORKDIR /opt/app
+# Copy built application from builder
+COPY --from=builder /app/dist ./dist
 
-# Copy tini static binary from builder
-COPY --from=builder /usr/bin/tini-static /usr/bin/tini
+# Create non-root user
+RUN addgroup -g 1001 -S bun && \
+    adduser -S -u 1001 -G bun bun
 
-# Copy binary from builder
-COPY --from=builder /app/service .
+# Change ownership
+RUN chown -R bun:bun /app
 
-# Copy config files
-COPY --from=builder /app/configs ./configs
+USER bun
 
 # Expose port
 EXPOSE 3000
 
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD bun --version || exit 1
+
 # Run the application
-ENTRYPOINT ["/usr/bin/tini", "--"]
-
-CMD ["service"]
-
+CMD ["bun", "run", "dist/main.js"]
