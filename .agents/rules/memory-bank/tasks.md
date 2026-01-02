@@ -3,11 +3,13 @@
 ## Test-Driven Development (TDD)
 
 ### TDD Cycle
+
 1. **Red:** Write a failing test for the desired behavior
 2. **Green:** Write minimal code to make the test pass
 3. **Refactor:** Improve code while keeping tests green
 
 ### When to Write Tests
+
 - **Before implementing:** New features or business logic
 - **Before fixing bugs:** Reproduce the bug with a test
 - **After refactoring:** Ensure behavior unchanged
@@ -16,18 +18,21 @@
 ### Test Organization
 
 **Unit Tests:**
+
 - Location: Same directory as implementation (`.test.ts` suffix)
 - Scope: Single function or method
 - Dependencies: Mock external dependencies
 - Examples: `src/domain/user/usecase/usecase.test.ts`
 
 **Integration Tests:**
+
 - Location: `test/integration/`
 - Scope: End-to-end API flows
 - Dependencies: Real database (testcontainers)
 - Examples: `test/integration/api.test.ts`
 
 **Mock Tests:**
+
 - Location: `test/mock/`
 - Scope: Database interactions
 - Dependencies: Database mocks
@@ -36,8 +41,8 @@
 ### Test Structure Template
 
 ```typescript
-describe('<FunctionName>_<Scenario>_<ExpectedResult>', () => {
-  it('should return expected result', async () => {
+describe("<FunctionName>_<Scenario>_<ExpectedResult>", () => {
+  it("should return expected result", async () => {
     // Arrange
     const mockRepo = vi.mocked(createMockUserRepository());
     const useCase = new UserUseCase(mockRepo, cfg, argon2Cfg, log);
@@ -58,11 +63,11 @@ describe('<FunctionName>_<Scenario>_<ExpectedResult>', () => {
 ### Table-Driven Tests
 
 ```typescript
-describe('validateEmail', () => {
+describe("validateEmail", () => {
   const testCases = [
-    { name: 'valid email', email: 'user@example.com', wantErr: false },
-    { name: 'invalid format', email: 'invalid', wantErr: true },
-    { name: 'empty', email: '', wantErr: true },
+    { name: "valid email", email: "user@example.com", wantErr: false },
+    { name: "invalid format", email: "invalid", wantErr: true },
+    { name: "empty", email: "", wantErr: true },
   ];
 
   testCases.forEach(({ name, email, wantErr }) => {
@@ -77,26 +82,31 @@ describe('validateEmail', () => {
 ### Running Tests
 
 **All tests:**
+
 ```bash
 bun test
 ```
 
 **Specific file:**
+
 ```bash
 bun test src/domain/user/usecase/usecase.test.ts
 ```
 
 **With coverage:**
+
 ```bash
 bun test --coverage
 ```
 
 **Integration tests:**
+
 ```bash
 bun test test/integration/
 ```
 
 ### Test Coverage Goals
+
 - **Critical business logic:** >90%
 - **Domain use cases:** >80%
 - **Handlers:** >70%
@@ -106,6 +116,7 @@ bun test test/integration/
 ## Refactoring Procedures
 
 ### When to Refactor
+
 - Code duplication detected
 - Complex functions (>50 lines)
 - God objects with too many responsibilities
@@ -114,6 +125,7 @@ bun test test/integration/
 - Adding new features becomes difficult
 
 ### Refactoring Checklist
+
 - [ ] Ensure tests exist and pass
 - [ ] Identify the smell/problem
 - [ ] Plan the refactoring approach
@@ -126,28 +138,33 @@ bun test test/integration/
 ### Common Refactorings
 
 **Extract Method:**
+
 - Move code to a new function
 - Give it a descriptive name
 - Replace original code with function call
 
 **Extract Interface:**
+
 - Identify common behavior
 - Create interface with methods
 - Implement interface in concrete types
 - Update dependencies to use interface
 
 **Replace Magic Numbers:**
+
 - Identify constants in code
 - Create named constants
 - Replace numbers with constants
 - Add documentation
 
 **Simplify Conditional:**
+
 - Use guard clauses
 - Replace nested if-else with switch
 - Extract complex conditions to named functions
 
 **Remove Dead Code:**
+
 - Identify unused code
 - Remove or comment out
 - Run tests to verify
@@ -156,6 +173,7 @@ bun test test/integration/
 ### Refactoring Example
 
 **Before:**
+
 ```typescript
 async register(c: Context) {
   const req = await c.req.json();
@@ -170,6 +188,7 @@ async register(c: Context) {
 ```
 
 **After:**
+
 ```typescript
 async register(c: Context) {
   const req = await this.bindAndValidateRequest(c);
@@ -194,6 +213,7 @@ private async bindAndValidateRequest(c: Context) {
 ## Code Review Checklist
 
 ### General Review
+
 - [ ] Code follows project coding standards
 - [ ] Naming is clear and descriptive
 - [ ] Functions are small and focused
@@ -204,6 +224,7 @@ private async bindAndValidateRequest(c: Context) {
 - [ ] Logging at appropriate levels
 
 ### Architecture Review
+
 - [ ] Follows clean architecture principles
 - [ ] Dependencies point inward
 - [ ] Domain logic isolated from infrastructure
@@ -212,6 +233,7 @@ private async bindAndValidateRequest(c: Context) {
 - [ ] Proper separation of concerns
 
 ### Security Review
+
 - [ ] Input validation on all user inputs
 - [ ] SQL injection prevention (Drizzle handles this)
 - [ ] Authentication/authorization enforced
@@ -221,6 +243,7 @@ private async bindAndValidateRequest(c: Context) {
 - [ ] Rate limiting applied
 
 ### Performance Review
+
 - [ ] No N+1 query problems
 - [ ] Database queries optimized
 - [ ] Connection pooling configured
@@ -229,6 +252,7 @@ private async bindAndValidateRequest(c: Context) {
 - [ ] Caching considered where appropriate
 
 ### Testing Review
+
 - [ ] Tests added for new functionality
 - [ ] Tests cover edge cases
 - [ ] Tests are readable and maintainable
@@ -237,6 +261,7 @@ private async bindAndValidateRequest(c: Context) {
 - [ ] Integration tests included for API changes
 
 ### Documentation Review
+
 - [ ] JSDoc comments on exported functions
 - [ ] API documentation updated (OpenAPI)
 - [ ] README updated if needed
@@ -246,18 +271,21 @@ private async bindAndValidateRequest(c: Context) {
 ### Specific Domain Reviews
 
 **User Domain:**
+
 - [ ] Password hashing with Argon2id
 - [ ] Email uniqueness enforced
 - [ ] JWT token properly generated
 - [ ] User ownership verified
 
 **Task Domain:**
+
 - [ ] Task ownership verified
 - [ ] Status values validated
 - [ ] Priority values validated
 - [ ] Due date handling correct
 
 **Database:**
+
 - [ ] Migration files created
 - [ ] Drizzle schema updated
 - [ ] Indexes added if needed
@@ -300,30 +328,34 @@ private async bindAndValidateRequest(c: Context) {
 ### Debugging Tools
 
 **Logging:**
+
 ```typescript
-logger.debug('Processing request', { userId, taskId });
-logger.error('Failed to update task', { error: err, taskId });
+logger.debug("Processing request", { userId, taskId });
+logger.error("Failed to update task", { error: err, taskId });
 ```
 
 **Structured Logging:**
+
 - Include request ID in all logs
 - Use consistent field names
 - Log at appropriate levels
 - Include context for errors
 
 **Error Inspection:**
+
 ```typescript
 if (err) {
-  logger.error('Operation failed', {
+  logger.error("Operation failed", {
     error: err.message,
-    operation: 'createUser',
-    email: req.email
+    operation: "createUser",
+    email: req.email,
   });
   // Use instanceof for error checking
 }
 ```
 
 **Database Debugging:**
+
 ```bash
 # Connect to database
 psql -h localhost -U postgres -d postgres
@@ -336,6 +368,7 @@ SELECT * FROM pg_stat_activity;
 ```
 
 **HTTP Debugging:**
+
 ```bash
 # Check API endpoint
 curl -X GET http://localhost:3000/health
@@ -351,24 +384,28 @@ curl -v http://localhost:3000/api/v1/tasks
 ### Common Issues & Solutions
 
 **Database Connection Issues:**
+
 - Check database is running
 - Verify connection string
 - Check connection pool settings
 - Review firewall rules
 
 **Authentication Failures:**
+
 - Verify JWT secret matches
 - Check token expiration
 - Validate token format
 - Review middleware configuration
 
 **Performance Issues:**
+
 - Check database query performance
 - Review connection pool settings
 - Profile with Bun's built-in tools
 - Check for N+1 queries
 
 **Test Failures:**
+
 - Run tests with verbose output
 - Check test data setup
 - Verify mock expectations
@@ -377,6 +414,7 @@ curl -v http://localhost:3000/api/v1/tasks
 ### Adding Debug Logging
 
 **Before Production:**
+
 ```typescript
 async login(ctx: Context, req: LoginUser) {
   logger.debug('Login attempt', { email: req.email });
@@ -392,6 +430,7 @@ async login(ctx: Context, req: LoginUser) {
 ```
 
 **Remove Before Production:**
+
 - Remove debug-level logs
 - Keep error and warn logs
 - Ensure no sensitive data in logs
@@ -399,10 +438,11 @@ async login(ctx: Context, req: LoginUser) {
 ### Performance Debugging
 
 **Enable Profiling:**
+
 ```typescript
 // Bun has built-in profiling
 // Add to routes
-app.get('/debug/pprof/*', async (c) => {
+app.get("/debug/pprof/*", async (c) => {
   // Profiling endpoint
 });
 ```
@@ -410,16 +450,19 @@ app.get('/debug/pprof/*', async (c) => {
 ### Integration Testing Debugging
 
 **Run Single Test:**
+
 ```bash
 bun test test/integration/api.test.ts -t "Login"
 ```
 
 **Keep Database Running:**
+
 ```bash
 # Testcontainers handles cleanup automatically
 ```
 
 **View Test Database:**
+
 ```bash
 # Get container ID
 docker ps
@@ -433,6 +476,7 @@ docker exec -it <container_id> psql -U postgres -d postgres
 ### Step-by-Step Process
 
 1. **Create Domain Structure**
+
    ```
    src/domain/<domain>/
      entity/
@@ -494,6 +538,7 @@ docker exec -it <container_id> psql -U postgres -d postgres
 ### Creating a Migration
 
 1. **Create Migration File**
+
    ```bash
    # Drizzle Kit generates migrations
    bunx drizzle-kit generate
@@ -505,6 +550,7 @@ docker exec -it <container_id> psql -U postgres -d postgres
    - Add indexes for foreign keys
 
 3. **Apply Migration**
+
    ```bash
    bunx drizzle-kit migrate
    ```
@@ -515,6 +561,7 @@ docker exec -it <container_id> psql -U postgres -d postgres
    ```
 
 ### Migration Best Practices
+
 - Always review generated migrations
 - Use transactions for complex changes
 - Add indexes for foreign keys
@@ -525,6 +572,7 @@ docker exec -it <container_id> psql -U postgres -d postgres
 ## Running the Application
 
 ### Development
+
 ```bash
 # Set environment
 export NODE_ENV=local
@@ -537,6 +585,7 @@ bun run src/index.ts
 ```
 
 ### Production
+
 ```bash
 # Build
 bun build src/index.ts --outdir ./dist
@@ -546,6 +595,7 @@ bun dist/index.js
 ```
 
 ### Docker
+
 ```bash
 # Build image
 docker build -t zercle-bun-template .
@@ -558,6 +608,7 @@ docker run -p 3000:3000 \
 ```
 
 ### Docker Compose
+
 ```bash
 # Start all services
 docker-compose up -d
@@ -572,6 +623,7 @@ docker-compose down
 ## Common Commands
 
 ### Linting
+
 ```bash
 # Run linter
 bunx eslint .
@@ -581,6 +633,7 @@ bunx eslint . --fix
 ```
 
 ### Formatting
+
 ```bash
 # Format code
 bunx prettier --write .
@@ -590,6 +643,7 @@ bunx prettier --check .
 ```
 
 ### Dependencies
+
 ```bash
 # Install dependencies
 bun install
@@ -605,6 +659,7 @@ bun add -d <package>
 ```
 
 ### Documentation
+
 ```bash
 # Generate OpenAPI docs
 bunx drizzle-kit studio
@@ -614,6 +669,7 @@ bunx drizzle-kit studio
 ```
 
 ### Drizzle Kit
+
 ```bash
 # Generate migrations
 bunx drizzle-kit generate
@@ -628,11 +684,13 @@ bunx drizzle-kit studio
 ## Environment Setup
 
 ### Prerequisites
+
 - Bun 1.0.0+
 - PostgreSQL 12+
 - Docker (optional, for containerized deployment)
 
 ### Local Development
+
 1. Clone repository
 2. Copy `.env.example` to `.env`
 3. Configure database connection
@@ -640,6 +698,7 @@ bunx drizzle-kit studio
 5. Start application
 
 ### Database Setup
+
 ```bash
 # Start PostgreSQL with Docker
 docker run --name postgres \
@@ -654,6 +713,7 @@ bunx drizzle-kit migrate
 ```
 
 ### Seed Data
+
 ```bash
 # Run seed script
 bun run scripts/seed-db.ts

@@ -142,11 +142,16 @@ jobs:
         run: docker-compose -f deployments/docker/docker-compose.test.yml up -d
 
       - name: Wait for database to be ready
-        uses: watchable/await-action@v1
-        with:
-          selector: "test-db"
-          condition: "service_healthy"
-          timeout: 60
+        run: |
+          for i in $(seq 1 60); do
+            if docker inspect --format='{{.State.Health.Status}}' test-db 2>/dev/null | grep -q "healthy"; then
+              echo "Database is ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Database did not become ready in time"
+          exit 1
 
       - name: Run integration tests
         run: bun run test:integration

@@ -1,13 +1,29 @@
-import type { Task, CreateTask, UpdateTask } from '../entity/task.js';
-import type { DrizzleDatabase} from '../../../infrastructure/db/drizzle.js';
-import { tasks } from '../../../infrastructure/db/drizzle.js';
-import { eq, and, desc } from 'drizzle-orm';
-import type { Logger } from '../../../infrastructure/logger/logger.js';
+import type { Task, CreateTask, UpdateTask } from "../entity/task.js";
+import type { DrizzleDatabase } from "../../../infrastructure/db/drizzle.js";
+import { tasks } from "../../../infrastructure/db/drizzle.js";
+import { eq, and, desc } from "drizzle-orm";
+import type { Logger } from "../../../infrastructure/logger/logger.js";
+
+type TaskStatus = "pending" | "in_progress" | "completed";
+type TaskPriority = "low" | "medium" | "high";
+type UpdateTaskData = {
+  updated_at: Date;
+  title?: string;
+  description?: string | null;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  due_date?: Date | null;
+  completed_at?: Date;
+};
 
 export interface ITaskRepository {
   create(task: CreateTask): Promise<Task>;
   getByID(id: string): Promise<Task | null>;
-  listByUser(userId: string, limit: number, offset: number): Promise<{ tasks: Task[]; total: number }>;
+  listByUser(
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<{ tasks: Task[]; total: number }>;
   update(id: string, userId: string, task: UpdateTask): Promise<Task | null>;
   delete(id: string, userId: string): Promise<void>;
 }
@@ -25,10 +41,10 @@ export class TaskRepository implements ITaskRepository {
         .values({
           user_id: task.userId,
           title: task.title,
-          description: task.description || null,
-          status: task.status || 'pending',
-          priority: task.priority || 'medium',
-          due_date: task.dueDate || null,
+          description: task.description ?? null,
+          status: task.status ?? "pending",
+          priority: task.priority ?? "medium",
+          due_date: task.dueDate ?? null,
         })
         .returning();
 
@@ -36,23 +52,27 @@ export class TaskRepository implements ITaskRepository {
         id: newTask.id,
         userId: newTask.user_id,
         title: newTask.title,
-        description: newTask.description || undefined,
-        status: newTask.status as any,
-        priority: newTask.priority as any,
-        dueDate: newTask.due_date || undefined,
-        completedAt: newTask.completed_at || undefined,
+        description: newTask.description ?? undefined,
+        status: newTask.status as TaskStatus,
+        priority: newTask.priority as TaskPriority,
+        dueDate: newTask.due_date ?? undefined,
+        completedAt: newTask.completed_at ?? undefined,
         createdAt: newTask.created_at,
         updatedAt: newTask.updated_at,
       };
     } catch (error) {
-      this.logger.error('Failed to create task', { error });
+      this.logger.error("Failed to create task", { error });
       throw error;
     }
   }
 
   async getByID(id: string): Promise<Task | null> {
     try {
-      const task = await this.db.db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+      const task = await this.db.db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, id))
+        .limit(1);
 
       if (task.length === 0) {
         return null;
@@ -63,21 +83,25 @@ export class TaskRepository implements ITaskRepository {
         id: t.id,
         userId: t.user_id,
         title: t.title,
-        description: t.description || undefined,
-        status: t.status as any,
-        priority: t.priority as any,
-        dueDate: t.due_date || undefined,
-        completedAt: t.completed_at || undefined,
+        description: t.description ?? undefined,
+        status: t.status as TaskStatus,
+        priority: t.priority as TaskPriority,
+        dueDate: t.due_date ?? undefined,
+        completedAt: t.completed_at ?? undefined,
         createdAt: t.created_at,
         updatedAt: t.updated_at,
       };
     } catch (error) {
-      this.logger.error('Failed to get task by ID', { error, id });
+      this.logger.error("Failed to get task by ID", { error, id });
       throw error;
     }
   }
 
-  async listByUser(userId: string, limit: number, offset: number): Promise<{ tasks: Task[]; total: number }> {
+  async listByUser(
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<{ tasks: Task[]; total: number }> {
     try {
       const taskList = await this.db.db
         .select()
@@ -97,33 +121,38 @@ export class TaskRepository implements ITaskRepository {
         id: t.id,
         userId: t.user_id,
         title: t.title,
-        description: t.description || undefined,
-        status: t.status as any,
-        priority: t.priority as any,
-        dueDate: t.due_date || undefined,
-        completedAt: t.completed_at || undefined,
+        description: t.description ?? undefined,
+        status: t.status as TaskStatus,
+        priority: t.priority as TaskPriority,
+        dueDate: t.due_date ?? undefined,
+        completedAt: t.completed_at ?? undefined,
         createdAt: t.created_at,
         updatedAt: t.updated_at,
       }));
 
       return { tasks: tasksList, total };
     } catch (error) {
-      this.logger.error('Failed to list tasks', { error, userId });
+      this.logger.error("Failed to list tasks", { error, userId });
       throw error;
     }
   }
 
-  async update(id: string, userId: string, task: UpdateTask): Promise<Task | null> {
+  async update(
+    id: string,
+    userId: string,
+    task: UpdateTask,
+  ): Promise<Task | null> {
     try {
-      const updateData: any = {
+      const updateData: UpdateTaskData = {
         updated_at: new Date(),
       };
 
       if (task.title !== undefined) updateData.title = task.title;
-      if (task.description !== undefined) updateData.description = task.description;
+      if (task.description !== undefined)
+        updateData.description = task.description;
       if (task.status !== undefined) {
         updateData.status = task.status;
-        if (task.status === 'completed') {
+        if (task.status === "completed") {
           updateData.completed_at = new Date();
         }
       }
@@ -144,16 +173,16 @@ export class TaskRepository implements ITaskRepository {
         id: updatedTask.id,
         userId: updatedTask.user_id,
         title: updatedTask.title,
-        description: updatedTask.description || undefined,
-        status: updatedTask.status as any,
-        priority: updatedTask.priority as any,
-        dueDate: updatedTask.due_date || undefined,
-        completedAt: updatedTask.completed_at || undefined,
+        description: updatedTask.description ?? undefined,
+        status: updatedTask.status as TaskStatus,
+        priority: updatedTask.priority as TaskPriority,
+        dueDate: updatedTask.due_date ?? undefined,
+        completedAt: updatedTask.completed_at ?? undefined,
         createdAt: updatedTask.created_at,
         updatedAt: updatedTask.updated_at,
       };
     } catch (error) {
-      this.logger.error('Failed to update task', { error, id, userId });
+      this.logger.error("Failed to update task", { error, id, userId });
       throw error;
     }
   }
@@ -164,7 +193,7 @@ export class TaskRepository implements ITaskRepository {
         .delete(tasks)
         .where(and(eq(tasks.id, id), eq(tasks.user_id, userId)));
     } catch (error) {
-      this.logger.error('Failed to delete task', { error, id, userId });
+      this.logger.error("Failed to delete task", { error, id, userId });
       throw error;
     }
   }

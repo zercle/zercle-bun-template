@@ -1,31 +1,34 @@
-import type { CreateUser, UpdateUser } from '../entity/user.js';
-import { User } from '../entity/user.js';
-import type { IUserRepository } from '../repository/user.js';
-import type { RegisterUser, LoginUser } from '../request/user.js';
-import type { UserResponse, LoginResponse, ListUsersResponse } from '../response/user.js';
-import type { JWTConfig } from '../../../infrastructure/config/config.js';
-import type { Passworder } from '../../../infrastructure/password/passworder.js';
-import type { Logger } from '../../../infrastructure/logger/logger.js';
-import { generateToken } from '../../../infrastructure/middleware/auth.js';
+import type { CreateUser, UpdateUser } from "../entity/user.js";
+import type { IUserRepository } from "../repository/user.js";
+import type { RegisterUser, LoginUser } from "../request/user.js";
+import type {
+  UserResponse,
+  LoginResponse,
+  ListUsersResponse,
+} from "../response/user.js";
+import type { JWTConfig } from "../../../infrastructure/config/config.js";
+import type { Passworder } from "../../../infrastructure/password/passworder.js";
+import type { Logger } from "../../../infrastructure/logger/logger.js";
+import { generateToken } from "../../../infrastructure/middleware/auth.js";
 
 export class ErrUserNotFound extends Error {
   constructor() {
-    super('User not found');
-    this.name = 'ErrUserNotFound';
+    super("User not found");
+    this.name = "ErrUserNotFound";
   }
 }
 
 export class ErrUserAlreadyExists extends Error {
   constructor() {
-    super('User already exists');
-    this.name = 'ErrUserAlreadyExists';
+    super("User already exists");
+    this.name = "ErrUserAlreadyExists";
   }
 }
 
 export class ErrInvalidCredentials extends Error {
   constructor() {
-    super('Invalid credentials');
-    this.name = 'ErrInvalidCredentials';
+    super("Invalid credentials");
+    this.name = "ErrInvalidCredentials";
   }
 }
 
@@ -90,7 +93,10 @@ export class UserUseCase implements IUserService {
     }
 
     // Verify password
-    const isValid = await this.passworder.verifyPassword(user.password, existing.password);
+    const isValid = await this.passworder.verifyPassword(
+      user.password,
+      existing.password,
+    );
     if (!isValid) {
       throw new ErrInvalidCredentials();
     }
@@ -130,7 +136,7 @@ export class UserUseCase implements IUserService {
   async updateProfile(id: string, user: UpdateUser): Promise<UserResponse> {
     // Validate full name length if provided
     if (user.fullName && user.fullName.length < 2) {
-      throw new Error('Full name must be at least 2 characters');
+      throw new Error("Full name must be at least 2 characters");
     }
 
     const updated = await this.repo.update(id, user);

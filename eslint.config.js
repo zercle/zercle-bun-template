@@ -54,8 +54,15 @@ export default [
 
   // Test files
   {
-    files: ["**/*.test.ts"],
+    files: ["tests/**/*.ts"],
+    plugins: {
+      "@typescript-eslint": tseslint.plugin,
+    },
     languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        sourceType: "module",
+      },
       globals: {
         Bun: "readonly",
         test: "readonly",
@@ -71,6 +78,7 @@ export default [
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
 

@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 # Integration test database configuration
 # Uses Podman-compatible settings with auto-cleanup for test environments

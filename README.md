@@ -31,17 +31,17 @@ A production-ready RESTful API template built with **Bun runtime** and **Hono fr
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|------------|
-| Runtime | [Bun](https://bun.sh/) v1.0.0+ |
-| Framework | [Hono](https://hono.dev/) v4.6.0 |
-| Language | [TypeScript](https://www.typescriptlang.org/) v5.7 |
-| Database | [PostgreSQL](https://www.postgresql.org/) with [Drizzle ORM](https://orm.drizzle.team/) v0.36.0 |
-| Authentication | [JWT](https://jwt.io/) + [Argon2id](https://github.com/ranisalt/node-argon2) |
-| Validation | [Zod](https://zod.dev/) v3.24 |
-| Logging | [Pino](https://getpino.io/) v9.6 |
-| Configuration | [js-yaml](https://github.com/nodeca/js-yaml) v4.1 |
-| Docker | [Docker](https://www.docker.com/) + [docker-compose](https://docs.docker.com/compose/) |
+| Category       | Technology                                                                                      |
+| -------------- | ----------------------------------------------------------------------------------------------- |
+| Runtime        | [Bun](https://bun.sh/) v1.0.0+                                                                  |
+| Framework      | [Hono](https://hono.dev/) v4.6.0                                                                |
+| Language       | [TypeScript](https://www.typescriptlang.org/) v5.7                                              |
+| Database       | [PostgreSQL](https://www.postgresql.org/) with [Drizzle ORM](https://orm.drizzle.team/) v0.36.0 |
+| Authentication | [JWT](https://jwt.io/) + [Argon2id](https://github.com/ranisalt/node-argon2)                    |
+| Validation     | [Zod](https://zod.dev/) v3.24                                                                   |
+| Logging        | [Pino](https://getpino.io/) v9.6                                                                |
+| Configuration  | [js-yaml](https://github.com/nodeca/js-yaml) v4.1                                               |
+| Docker         | [Docker](https://www.docker.com/) + [docker-compose](https://docs.docker.com/compose/)          |
 
 ## Project Structure
 
@@ -235,12 +235,12 @@ ARGON2ID_PARALLELISM=1
 
 The application uses YAML configuration files per environment:
 
-| File | Environment | Description |
-|------|-------------|-------------|
-| `configs/local.yaml` | Local | Local development settings |
-| `configs/dev.yaml` | Development | Development environment |
-| `configs/uat.yaml` | UAT | User acceptance testing |
-| `configs/prod.yaml` | Production | Production settings |
+| File                 | Environment | Description                |
+| -------------------- | ----------- | -------------------------- |
+| `configs/local.yaml` | Local       | Local development settings |
+| `configs/dev.yaml`   | Development | Development environment    |
+| `configs/uat.yaml`   | UAT         | User acceptance testing    |
+| `configs/prod.yaml`  | Production  | Production settings        |
 
 To change the active environment, set `SERVER_ENV`:
 
@@ -326,36 +326,36 @@ http://localhost:3000
 
 ### Health Check Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Application health check |
-| GET | `/readiness` | Readiness probe (checks DB connection) |
+| Method | Endpoint     | Description                            |
+| ------ | ------------ | -------------------------------------- |
+| GET    | `/health`    | Application health check               |
+| GET    | `/readiness` | Readiness probe (checks DB connection) |
 
 ### Authentication Endpoints
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/v1/auth/register` | ❌ | Register a new user |
-| POST | `/api/v1/auth/login` | ❌ | Login and get JWT token |
+| Method | Endpoint                | Auth | Description             |
+| ------ | ----------------------- | ---- | ----------------------- |
+| POST   | `/api/v1/auth/register` | ❌   | Register a new user     |
+| POST   | `/api/v1/auth/login`    | ❌   | Login and get JWT token |
 
 ### User Endpoints
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/v1/users/profile` | ✅ | Get current user profile |
-| PUT | `/api/v1/users/profile` | ✅ | Update user profile |
-| DELETE | `/api/v1/users/profile` | ✅ | Delete user account |
-| GET | `/api/v1/users` | ✅ | List all users (paginated) |
+| Method | Endpoint                | Auth | Description                |
+| ------ | ----------------------- | ---- | -------------------------- |
+| GET    | `/api/v1/users/profile` | ✅   | Get current user profile   |
+| PUT    | `/api/v1/users/profile` | ✅   | Update user profile        |
+| DELETE | `/api/v1/users/profile` | ✅   | Delete user account        |
+| GET    | `/api/v1/users`         | ✅   | List all users (paginated) |
 
 ### Task Endpoints
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/v1/tasks` | ✅ | Create a new task |
-| GET | `/api/v1/tasks` | ✅ | List all tasks (paginated) |
-| GET | `/api/v1/tasks/:id` | ✅ | Get task by ID |
-| PUT | `/api/v1/tasks/:id` | ✅ | Update a task |
-| DELETE | `/api/v1/tasks/:id` | ✅ | Delete a task |
+| Method | Endpoint            | Auth | Description                |
+| ------ | ------------------- | ---- | -------------------------- |
+| POST   | `/api/v1/tasks`     | ✅   | Create a new task          |
+| GET    | `/api/v1/tasks`     | ✅   | List all tasks (paginated) |
+| GET    | `/api/v1/tasks/:id` | ✅   | Get task by ID             |
+| PUT    | `/api/v1/tasks/:id` | ✅   | Update a task              |
+| DELETE | `/api/v1/tasks/:id` | ✅   | Delete a task              |
 
 ### Request/Response Examples
 
@@ -501,12 +501,15 @@ export interface CreateOrder {
 
 ```typescript
 // src/domain/order/repository/order.ts
-import { DrizzleDatabase } from '../../../infrastructure/db/drizzle.js';
-import { Logger } from '../../../infrastructure/logger/logger.js';
-import { Order } from '../entity/order.js';
+import { DrizzleDatabase } from "../../../infrastructure/db/drizzle.js";
+import { Logger } from "../../../infrastructure/logger/logger.js";
+import { Order } from "../entity/order.js";
 
 export class OrderRepository {
-  constructor(private db: DrizzleDatabase, private logger: Logger) {}
+  constructor(
+    private db: DrizzleDatabase,
+    private logger: Logger,
+  ) {}
 
   async findById(id: string): Promise<Order | null> {
     // Implementation
@@ -536,14 +539,16 @@ export class OrderUseCase implements IOrderUseCase {
 
 ```typescript
 // src/domain/order/request/order.ts
-import { z } from 'zod';
+import { z } from "zod";
 
 export const createOrderSchema = z.object({
   userId: z.string().uuid(),
-  items: z.array(z.object({
-    productId: z.string().uuid(),
-    quantity: z.number().positive(),
-  })),
+  items: z.array(
+    z.object({
+      productId: z.string().uuid(),
+      quantity: z.number().positive(),
+    }),
+  ),
 });
 ```
 
@@ -551,9 +556,9 @@ export const createOrderSchema = z.object({
 
 ```typescript
 // src/domain/order/handler/order.ts
-import { Context } from 'hono';
-import { IOrderUseCase } from '../usecase/order.js';
-import { success, created } from '../../../utils/response.js';
+import { Context } from "hono";
+import { IOrderUseCase } from "../usecase/order.js";
+import { success, created } from "../../../utils/response.js";
 
 export class OrderHandler {
   constructor(private useCase: IOrderUseCase) {}
@@ -579,7 +584,7 @@ const orderHandler = new OrderHandler(orderUseCase);
 private registerOrderRoutes(handler: OrderHandler) {
   const protectedRoutes = this.hono.basePath('/api/v1');
   protectedRoutes.use('/orders*', createAuthMiddleware(this.config.jwt));
-  
+
   protectedRoutes.post('/orders', (c) => handler.createOrder(c));
   protectedRoutes.get('/orders/:id', (c) => handler.getOrder(c));
 }
@@ -596,14 +601,14 @@ private registerOrderRoutes(handler: OrderHandler) {
 
 ### Naming Conventions
 
-| Component | Convention | Example |
-|-----------|------------|---------|
-| Files | kebab-case | `user-handler.ts` |
-| Classes | PascalCase | `UserRepository` |
-| Interfaces | PascalCase | `IUserService` |
-| Variables/Functions | camelCase | `getUserById` |
-| Constants | UPPER_SNAKE_CASE | `MAX_REQUESTS` |
-| Database Tables | snake_case | `user_accounts` |
+| Component           | Convention       | Example           |
+| ------------------- | ---------------- | ----------------- |
+| Files               | kebab-case       | `user-handler.ts` |
+| Classes             | PascalCase       | `UserRepository`  |
+| Interfaces          | PascalCase       | `IUserService`    |
+| Variables/Functions | camelCase        | `getUserById`     |
+| Constants           | UPPER_SNAKE_CASE | `MAX_REQUESTS`    |
+| Database Tables     | snake_case       | `user_accounts`   |
 
 ## Testing
 
@@ -613,10 +618,10 @@ Create test files with `.test.ts` extension:
 
 ```typescript
 // src/domain/user/usecase/user.test.ts
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from "bun:test";
 
-describe('User UseCase', () => {
-  it('should register a new user', async () => {
+describe("User UseCase", () => {
+  it("should register a new user", async () => {
     // Test implementation
   });
 });

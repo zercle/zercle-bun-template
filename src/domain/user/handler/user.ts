@@ -1,11 +1,30 @@
-import type { Context } from 'hono';
-import { zValidator } from '@hono/zod-validator';
-import type { IUserService} from '../usecase/user.js';
-import { ErrUserNotFound, ErrUserAlreadyExists, ErrInvalidCredentials } from '../usecase/user.js';
-import { registerUserSchema, loginUserSchema, updateUserSchema } from '../request/user.js';
-import { success, created, noContent, badRequest, unauthorized, notFound, conflict, internalError } from '../../../utils/response.js';
-import { getRequestID, getUserId } from '../../../infrastructure/middleware/auth.js';
-import type { Logger } from '../../../infrastructure/logger/logger.js';
+import type { Context } from "hono";
+import type { IUserService } from "../usecase/user.js";
+import {
+  ErrUserNotFound,
+  ErrUserAlreadyExists,
+  ErrInvalidCredentials,
+} from "../usecase/user.js";
+import {
+  registerUserSchema,
+  loginUserSchema,
+  updateUserSchema,
+} from "../request/user.js";
+import {
+  success,
+  created,
+  noContent,
+  badRequest,
+  unauthorized,
+  notFound,
+  conflict,
+  internalError,
+} from "../../../utils/response.js";
+import {
+  getRequestID,
+  getUserId,
+} from "../../../infrastructure/middleware/auth.js";
+import type { Logger } from "../../../infrastructure/logger/logger.js";
 
 export class UserHandler {
   constructor(
@@ -22,7 +41,7 @@ export class UserHandler {
 
       const result = await this.useCase.register(validatedData);
 
-      this.logger.info('User registered successfully', {
+      this.logger.info("User registered successfully", {
         request_id: requestId,
         email: validatedData.email,
       });
@@ -30,16 +49,16 @@ export class UserHandler {
       return created(c, result);
     } catch (error) {
       if (error instanceof ErrUserAlreadyExists) {
-        return conflict(c, 'Email already exists');
+        return conflict(c, "Email already exists");
       }
-      if (error instanceof Error && error.name === 'ZodError') {
-        return badRequest(c, 'Validation failed', this.formatZodError(error));
+      if (error instanceof Error && error.name === "ZodError") {
+        return badRequest(c, "Validation failed", this.formatZodError(error));
       }
-      this.logger.error('Failed to register user', {
+      this.logger.error("Failed to register user", {
         request_id: requestId,
         error: error instanceof Error ? error.message : String(error),
       });
-      return internalError(c, 'Failed to register user');
+      return internalError(c, "Failed to register user");
     }
   }
 
@@ -52,7 +71,7 @@ export class UserHandler {
 
       const result = await this.useCase.login(validatedData);
 
-      this.logger.info('User logged in successfully', {
+      this.logger.info("User logged in successfully", {
         request_id: requestId,
         email: validatedData.email,
       });
@@ -60,16 +79,16 @@ export class UserHandler {
       return success(c, result);
     } catch (error) {
       if (error instanceof ErrInvalidCredentials) {
-        return unauthorized(c, 'Invalid email or password');
+        return unauthorized(c, "Invalid email or password");
       }
-      if (error instanceof Error && error.name === 'ZodError') {
-        return badRequest(c, 'Validation failed', this.formatZodError(error));
+      if (error instanceof Error && error.name === "ZodError") {
+        return badRequest(c, "Validation failed", this.formatZodError(error));
       }
-      this.logger.error('Failed to login user', {
+      this.logger.error("Failed to login user", {
         request_id: requestId,
         error: error instanceof Error ? error.message : String(error),
       });
-      return internalError(c, 'Failed to login user');
+      return internalError(c, "Failed to login user");
     }
   }
 
@@ -78,7 +97,7 @@ export class UserHandler {
     const userId = getUserId(c);
 
     if (!userId) {
-      return unauthorized(c, 'Invalid token');
+      return unauthorized(c, "Invalid token");
     }
 
     try {
@@ -87,13 +106,13 @@ export class UserHandler {
       return success(c, result);
     } catch (error) {
       if (error instanceof ErrUserNotFound) {
-        return notFound(c, 'User not found');
+        return notFound(c, "User not found");
       }
-      this.logger.error('Failed to get user profile', {
+      this.logger.error("Failed to get user profile", {
         request_id: requestId,
         error: error instanceof Error ? error.message : String(error),
       });
-      return internalError(c, 'Failed to get user profile');
+      return internalError(c, "Failed to get user profile");
     }
   }
 
@@ -102,7 +121,7 @@ export class UserHandler {
     const userId = getUserId(c);
 
     if (!userId) {
-      return unauthorized(c, 'Invalid token');
+      return unauthorized(c, "Invalid token");
     }
 
     try {
@@ -111,7 +130,7 @@ export class UserHandler {
 
       const result = await this.useCase.updateProfile(userId, validatedData);
 
-      this.logger.info('User profile updated successfully', {
+      this.logger.info("User profile updated successfully", {
         request_id: requestId,
         user_id: userId,
       });
@@ -119,16 +138,16 @@ export class UserHandler {
       return success(c, result);
     } catch (error) {
       if (error instanceof ErrUserNotFound) {
-        return notFound(c, 'User not found');
+        return notFound(c, "User not found");
       }
-      if (error instanceof Error && error.name === 'ZodError') {
-        return badRequest(c, 'Validation failed', this.formatZodError(error));
+      if (error instanceof Error && error.name === "ZodError") {
+        return badRequest(c, "Validation failed", this.formatZodError(error));
       }
-      this.logger.error('Failed to update user profile', {
+      this.logger.error("Failed to update user profile", {
         request_id: requestId,
         error: error instanceof Error ? error.message : String(error),
       });
-      return internalError(c, 'Failed to update user profile');
+      return internalError(c, "Failed to update user profile");
     }
   }
 
@@ -137,13 +156,13 @@ export class UserHandler {
     const userId = getUserId(c);
 
     if (!userId) {
-      return unauthorized(c, 'Invalid token');
+      return unauthorized(c, "Invalid token");
     }
 
     try {
       await this.useCase.deleteAccount(userId);
 
-      this.logger.info('User account deleted successfully', {
+      this.logger.info("User account deleted successfully", {
         request_id: requestId,
         user_id: userId,
       });
@@ -151,13 +170,13 @@ export class UserHandler {
       return noContent(c);
     } catch (error) {
       if (error instanceof ErrUserNotFound) {
-        return notFound(c, 'User not found');
+        return notFound(c, "User not found");
       }
-      this.logger.error('Failed to delete user account', {
+      this.logger.error("Failed to delete user account", {
         request_id: requestId,
         error: error instanceof Error ? error.message : String(error),
       });
-      return internalError(c, 'Failed to delete user account');
+      return internalError(c, "Failed to delete user account");
     }
   }
 
@@ -165,23 +184,23 @@ export class UserHandler {
     const requestId = getRequestID(c);
 
     try {
-      const limit = this.parseLimit(c.req.query('limit'));
-      const offset = this.parseOffset(c.req.query('offset'));
+      const limit = this.parseLimit(c.req.query("limit"));
+      const offset = this.parseOffset(c.req.query("offset"));
 
       const result = await this.useCase.listUsers(limit, offset);
 
       return success(c, result, { limit, offset });
     } catch (error) {
-      this.logger.error('Failed to list users', {
+      this.logger.error("Failed to list users", {
         request_id: requestId,
         error: error instanceof Error ? error.message : String(error),
       });
-      return internalError(c, 'Failed to list users');
+      return internalError(c, "Failed to list users");
     }
   }
 
   private parseLimit(limit?: string): number {
-    const parsed = parseInt(limit || '20', 10);
+    const parsed = parseInt(limit ?? "20", 10);
     if (parsed <= 0 || parsed > 100) {
       return 20;
     }
@@ -189,7 +208,7 @@ export class UserHandler {
   }
 
   private parseOffset(offset?: string): number {
-    const parsed = parseInt(offset || '0', 10);
+    const parsed = parseInt(offset ?? "0", 10);
     if (parsed < 0) {
       return 0;
     }
@@ -197,12 +216,14 @@ export class UserHandler {
   }
 
   private formatZodError(error: Error): Record<string, string[]> {
-    if (error.name === 'ZodError' && 'issues' in error) {
-      const issues = (error as any).issues;
+    if (error.name === "ZodError" && "issues" in error) {
+      const issues = (
+        error as { issues: Array<{ path: string[]; message: string }> }
+      ).issues;
       const errors: Record<string, string[]> = {};
 
       for (const issue of issues) {
-        const path = issue.path.join('.');
+        const path = issue.path.join(".");
         if (!errors[path]) {
           errors[path] = [];
         }
