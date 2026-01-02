@@ -1,7 +1,7 @@
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
-import yaml from 'js-yaml';
-import { z } from 'zod';
+import { readFileSync } from "fs";
+import { resolve } from "path";
+import yaml from "js-yaml";
+import { z } from "zod";
 
 // Configuration schemas with validation
 const ServerConfigSchema = z.object({
@@ -16,12 +16,12 @@ const DatabaseConfigSchema = z.object({
   user: z.string().min(1),
   password: z.string().min(1),
   dbname: z.string().min(1),
-  driver: z.string().default('postgres'),
+  driver: z.string().default("postgres"),
   max_conns: z.number().int().positive().default(25),
   min_conns: z.number().int().nonnegative().default(5),
-  max_conn_lifetime: z.string().default('1h'),
-  max_conn_idletime: z.string().default('10m'),
-  health_check_period: z.string().default('1m'),
+  max_conn_lifetime: z.string().default("1h"),
+  max_conn_idletime: z.string().default("10m"),
+  health_check_period: z.string().default("1m"),
 });
 
 const JWTConfigSchema = z.object({
@@ -30,12 +30,12 @@ const JWTConfigSchema = z.object({
 });
 
 const LoggingConfigSchema = z.object({
-  level: z.enum(['debug', 'info', 'warn', 'error', 'fatal']).default('info'),
-  format: z.enum(['console', 'json']).default('json'),
+  level: z.enum(["debug", "info", "warn", "error", "fatal"]).default("info"),
+  format: z.enum(["console", "json"]).default("json"),
 });
 
 const CORSConfigSchema = z.object({
-  allowed_origins: z.array(z.string()).default(['*']),
+  allowed_origins: z.array(z.string()).default(["*"]),
 });
 
 const RateLimitConfigSchema = z.object({
@@ -87,8 +87,8 @@ export interface JWTConfig {
 }
 
 export interface LoggingConfig {
-  level: 'debug' | 'info' | 'warn' | 'error' | 'fatal';
-  format: 'console' | 'json';
+  level: "debug" | "info" | "warn" | "error" | "fatal";
+  format: "console" | "json";
 }
 
 export interface CORSConfig {
@@ -122,37 +122,58 @@ export interface Config {
  * Load configuration from YAML file and override with environment variables
  */
 export function loadConfig(configPath?: string): Config {
-  const env = process.env.SERVER_ENV || 'local';
-  const configFilePath = configPath || resolve(process.cwd(), `configs/${env}.yaml`);
+  const env = process.env.SERVER_ENV ?? "local";
+  const configFilePath =
+    configPath ?? resolve(process.cwd(), `configs/${env}.yaml`);
 
   try {
-    const fileContents = readFileSync(configFilePath, 'utf8');
-    const config = yaml.load(fileContents) as any;
+    const fileContents = readFileSync(configFilePath, "utf8");
+    const config = yaml.load(fileContents) as Record<string, unknown>;
 
     // Override with environment variables
     if (process.env.SERVER_HOST) config.server.host = process.env.SERVER_HOST;
-    if (process.env.SERVER_PORT) config.server.port = parseInt(process.env.SERVER_PORT, 10);
+    if (process.env.SERVER_PORT)
+      config.server.port = parseInt(process.env.SERVER_PORT, 10);
     if (process.env.SERVER_ENV) config.server.env = process.env.SERVER_ENV;
 
     if (process.env.DB_HOST) config.database.host = process.env.DB_HOST;
-    if (process.env.DB_PORT) config.database.port = parseInt(process.env.DB_PORT, 10);
+    if (process.env.DB_PORT)
+      config.database.port = parseInt(process.env.DB_PORT, 10);
     if (process.env.DB_USER) config.database.user = process.env.DB_USER;
-    if (process.env.DB_PASSWORD) config.database.password = process.env.DB_PASSWORD;
+    if (process.env.DB_PASSWORD)
+      config.database.password = process.env.DB_PASSWORD;
     if (process.env.DB_NAME) config.database.dbname = process.env.DB_NAME;
     if (process.env.DB_DRIVER) config.database.driver = process.env.DB_DRIVER;
 
     if (process.env.JWT_SECRET) config.jwt.secret = process.env.JWT_SECRET;
-    if (process.env.JWT_EXPIRATION) config.jwt.expiration = parseInt(process.env.JWT_EXPIRATION, 10);
+    if (process.env.JWT_EXPIRATION)
+      config.jwt.expiration = parseInt(process.env.JWT_EXPIRATION, 10);
 
-    if (process.env.LOG_LEVEL) config.logging.level = process.env.LOG_LEVEL as any;
-    if (process.env.LOG_FORMAT) config.logging.format = process.env.LOG_FORMAT as any;
+    if (process.env.LOG_LEVEL)
+      config.logging.level = process.env.LOG_LEVEL as LoggingConfig["level"];
+    if (process.env.LOG_FORMAT)
+      config.logging.format = process.env.LOG_FORMAT as LoggingConfig["format"];
 
-    if (process.env.ARGON2ID_MEMORY) config.argon2id.memory = parseInt(process.env.ARGON2ID_MEMORY, 10);
-    if (process.env.ARGON2ID_ITERATIONS) config.argon2id.iterations = parseInt(process.env.ARGON2ID_ITERATIONS, 10);
-    if (process.env.ARGON2ID_PARALLELISM) config.argon2id.parallelism = parseInt(process.env.ARGON2ID_PARALLELISM, 10);
+    if (process.env.ARGON2ID_MEMORY)
+      config.argon2id.memory = parseInt(process.env.ARGON2ID_MEMORY, 10);
+    if (process.env.ARGON2ID_ITERATIONS)
+      config.argon2id.iterations = parseInt(
+        process.env.ARGON2ID_ITERATIONS,
+        10,
+      );
+    if (process.env.ARGON2ID_PARALLELISM)
+      config.argon2id.parallelism = parseInt(
+        process.env.ARGON2ID_PARALLELISM,
+        10,
+      );
 
-    if (process.env.RATE_LIMIT_REQUESTS) config.rate_limit.requests = parseInt(process.env.RATE_LIMIT_REQUESTS, 10);
-    if (process.env.RATE_LIMIT_WINDOW) config.rate_limit.window = parseInt(process.env.RATE_LIMIT_WINDOW, 10);
+    if (process.env.RATE_LIMIT_REQUESTS)
+      config.rate_limit.requests = parseInt(
+        process.env.RATE_LIMIT_REQUESTS,
+        10,
+      );
+    if (process.env.RATE_LIMIT_WINDOW)
+      config.rate_limit.window = parseInt(process.env.RATE_LIMIT_WINDOW, 10);
 
     // Validate configuration
     return ConfigSchema.parse(config);

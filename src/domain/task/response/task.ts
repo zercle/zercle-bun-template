@@ -3,8 +3,8 @@ export interface TaskResponse {
   userId: string;
   title: string;
   description?: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: "pending" | "in_progress" | "completed" | "cancelled";
+  priority: "low" | "medium" | "high" | "urgent";
   dueDate?: Date;
   completedAt?: Date;
   createdAt: Date;

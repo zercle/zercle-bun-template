@@ -1,7 +1,7 @@
-import type { Context } from 'hono';
+import type { Context } from "hono";
 
 export interface JSendResponse<T = unknown> {
-  status: 'success' | 'fail' | 'error';
+  status: "success" | "fail" | "error";
   data?: T;
   message?: string;
   meta?: {
@@ -12,9 +12,13 @@ export interface JSendResponse<T = unknown> {
   };
 }
 
-export function success<T>(c: Context, data: T, meta?: JSendResponse<T>['meta']) {
+export function success<T>(
+  c: Context,
+  data: T,
+  meta?: JSendResponse<T>["meta"],
+) {
   const response: JSendResponse<T> = {
-    status: 'success',
+    status: "success",
     data,
   };
 
@@ -27,7 +31,7 @@ export function success<T>(c: Context, data: T, meta?: JSendResponse<T>['meta'])
 
 export function created<T>(c: Context, data: T) {
   const response: JSendResponse<T> = {
-    status: 'success',
+    status: "success",
     data,
   };
 
@@ -35,17 +39,22 @@ export function created<T>(c: Context, data: T) {
 }
 
 export function noContent(c: Context) {
-  return c.json({ status: 'success' }, 204);
+  return c.json({ status: "success" }, 204);
 }
 
-export function badRequest(c: Context, message: string, errors?: Record<string, string[]>) {
+export function badRequest(
+  c: Context,
+  message: string,
+  errors?: Record<string, string[]>,
+) {
   const response: JSendResponse = {
-    status: 'fail',
+    status: "fail",
     message,
   };
 
   if (errors) {
-    (response as any).errors = errors;
+    (response as JSendResponse & { errors: Record<string, string[]> }).errors =
+      errors;
   }
 
   return c.json(response, 400);
@@ -53,7 +62,7 @@ export function badRequest(c: Context, message: string, errors?: Record<string, 
 
 export function unauthorized(c: Context, message: string) {
   const response: JSendResponse = {
-    status: 'fail',
+    status: "fail",
     message,
   };
 
@@ -62,7 +71,7 @@ export function unauthorized(c: Context, message: string) {
 
 export function forbidden(c: Context, message: string) {
   const response: JSendResponse = {
-    status: 'fail',
+    status: "fail",
     message,
   };
 
@@ -71,7 +80,7 @@ export function forbidden(c: Context, message: string) {
 
 export function notFound(c: Context, message: string) {
   const response: JSendResponse = {
-    status: 'fail',
+    status: "fail",
     message,
   };
 
@@ -80,7 +89,7 @@ export function notFound(c: Context, message: string) {
 
 export function conflict(c: Context, message: string) {
   const response: JSendResponse = {
-    status: 'fail',
+    status: "fail",
     message,
   };
 
@@ -89,7 +98,7 @@ export function conflict(c: Context, message: string) {
 
 export function internalError(c: Context, message: string) {
   const response: JSendResponse = {
-    status: 'error',
+    status: "error",
     message,
   };
 
@@ -98,7 +107,7 @@ export function internalError(c: Context, message: string) {
 
 export function errorResponse(c: Context, status: number, message: string) {
   const response: JSendResponse = {
-    status: status >= 500 ? 'error' : 'fail',
+    status: status >= 500 ? "error" : "fail",
     message,
   };
 

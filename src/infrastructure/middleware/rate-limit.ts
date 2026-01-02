@@ -1,5 +1,5 @@
-import type { Context, Next } from 'hono';
-import type { RateLimitConfig } from '../config/config.js';
+import type { Context, Next } from "hono";
+import type { RateLimitConfig } from "../config/config.js";
 
 interface RateLimitEntry {
   count: number;
@@ -10,7 +10,8 @@ const rateLimitMap = new Map<string, RateLimitEntry>();
 
 export function createRateLimitMiddleware(config: RateLimitConfig) {
   return async (c: Context, next: Next) => {
-    const clientId = c.req.header('X-Forwarded-For') || c.req.header('X-Real-IP') || 'unknown';
+    const clientId =
+      c.req.header("X-Forwarded-For") ?? c.req.header("X-Real-IP") ?? "unknown";
     const now = Date.now();
     const windowMs = config.window * 1000;
 
@@ -29,17 +30,17 @@ export function createRateLimitMiddleware(config: RateLimitConfig) {
     const remaining = Math.max(0, config.requests - entry.count);
     const resetTime = Math.ceil(entry.resetTime / 1000);
 
-    c.header('X-RateLimit-Limit', config.requests.toString());
-    c.header('X-RateLimit-Remaining', remaining.toString());
-    c.header('X-RateLimit-Reset', resetTime.toString());
+    c.header("X-RateLimit-Limit", config.requests.toString());
+    c.header("X-RateLimit-Remaining", remaining.toString());
+    c.header("X-RateLimit-Reset", resetTime.toString());
 
     if (entry.count > config.requests) {
       return c.json(
         {
-          status: 'error',
-          message: 'Rate limit exceeded',
+          status: "error",
+          message: "Rate limit exceeded",
         },
-        429
+        429,
       );
     }
 

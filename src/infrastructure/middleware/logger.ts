@@ -1,13 +1,13 @@
-import type { Context, Next } from 'hono';
-import type { Logger } from '../logger/logger.js';
-import { getRequestID } from './request-id.js';
+import type { Context, Next } from "hono";
+import type { Logger } from "../logger/logger.js";
+import { getRequestID } from "./request-id.js";
 
 export function createLoggerMiddleware(logger: Logger) {
   return async (c: Context, next: Next) => {
     const start = Date.now();
     const requestId = getRequestID(c);
 
-    logger.info('Request started', {
+    logger.info("Request started", {
       request_id: requestId,
       method: c.req.method,
       path: c.req.path,
@@ -19,7 +19,7 @@ export function createLoggerMiddleware(logger: Logger) {
     const duration = Date.now() - start;
     const status = c.res.status;
 
-    logger.info('Request completed', {
+    logger.info("Request completed", {
       request_id: requestId,
       method: c.req.method,
       path: c.req.path,

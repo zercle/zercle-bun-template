@@ -1,29 +1,39 @@
-import type { CreateTask, UpdateTask } from '../entity/task.js';
-import { Task } from '../entity/task.js';
-import type { ITaskRepository } from '../repository/task.js';
-import type { CreateTask as CreateTaskDTO, UpdateTask as UpdateTaskDTO } from '../request/task.js';
-import type { TaskResponse, ListTasksResponse } from '../response/task.js';
-import type { Logger } from '../../../infrastructure/logger/logger.js';
+import type { CreateTask, UpdateTask } from "../entity/task.js";
+import type { ITaskRepository } from "../repository/task.js";
+import type {
+  CreateTask as CreateTaskDTO,
+  UpdateTask as UpdateTaskDTO,
+} from "../request/task.js";
+import type { TaskResponse, ListTasksResponse } from "../response/task.js";
+import type { Logger } from "../../../infrastructure/logger/logger.js";
 
 export class ErrTaskNotFound extends Error {
   constructor() {
-    super('Task not found');
-    this.name = 'ErrTaskNotFound';
+    super("Task not found");
+    this.name = "ErrTaskNotFound";
   }
 }
 
 export class ErrUnauthorizedTask extends Error {
   constructor() {
-    super('Unauthorized access to task');
-    this.name = 'ErrUnauthorizedTask';
+    super("Unauthorized access to task");
+    this.name = "ErrUnauthorizedTask";
   }
 }
 
 export interface ITaskService {
   createTask(userId: string, task: CreateTaskDTO): Promise<TaskResponse>;
   getTask(id: string, userId: string): Promise<TaskResponse>;
-  listTasks(userId: string, limit: number, offset: number): Promise<ListTasksResponse>;
-  updateTask(id: string, userId: string, task: UpdateTaskDTO): Promise<TaskResponse>;
+  listTasks(
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<ListTasksResponse>;
+  updateTask(
+    id: string,
+    userId: string,
+    task: UpdateTaskDTO,
+  ): Promise<TaskResponse>;
   deleteTask(id: string, userId: string): Promise<void>;
 }
 
@@ -84,7 +94,11 @@ export class TaskUseCase implements ITaskService {
     };
   }
 
-  async listTasks(userId: string, limit: number, offset: number): Promise<ListTasksResponse> {
+  async listTasks(
+    userId: string,
+    limit: number,
+    offset: number,
+  ): Promise<ListTasksResponse> {
     const { tasks, total } = await this.repo.listByUser(userId, limit, offset);
 
     return {
@@ -104,7 +118,11 @@ export class TaskUseCase implements ITaskService {
     };
   }
 
-  async updateTask(id: string, userId: string, task: UpdateTaskDTO): Promise<TaskResponse> {
+  async updateTask(
+    id: string,
+    userId: string,
+    task: UpdateTaskDTO,
+  ): Promise<TaskResponse> {
     // Check if task exists and belongs to user
     const existing = await this.repo.getByID(id);
     if (!existing) {

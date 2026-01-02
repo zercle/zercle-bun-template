@@ -1,4 +1,4 @@
-import * as argon2 from 'argon2';
+import * as argon2 from "argon2";
 
 export interface Argon2idConfig {
   memory: number;
@@ -26,7 +26,9 @@ export class Passworder {
         saltLength: this.config.salt_length,
       });
     } catch (error) {
-      throw new Error(`Failed to hash password: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to hash password: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -34,7 +36,9 @@ export class Passworder {
     try {
       return await argon2.verify(hash, password);
     } catch (error) {
-      throw new Error(`Failed to verify password: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to verify password: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

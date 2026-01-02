@@ -1,6 +1,6 @@
-import { loadConfig } from './infrastructure/config/config.js';
-import { App } from './app.js';
-import 'dotenv/config';
+import { loadConfig } from "./infrastructure/config/config.js";
+import { App } from "./app.js";
+import "dotenv/config";
 
 async function main() {
   try {
@@ -12,20 +12,19 @@ async function main() {
     await app.start();
 
     // Handle graceful shutdown
-    process.on('SIGTERM', async () => {
-      console.log('SIGTERM signal received');
+    process.on("SIGTERM", async () => {
+      console.log("SIGTERM signal received");
       await app.stop();
       process.exit(0);
     });
 
-    process.on('SIGINT', async () => {
-      console.log('SIGINT signal received');
+    process.on("SIGINT", async () => {
+      console.log("SIGINT signal received");
       await app.stop();
       process.exit(0);
     });
-
   } catch (error) {
-    console.error('Failed to start application:', error);
+    console.error("Failed to start application:", error);
     process.exit(1);
   }
 }

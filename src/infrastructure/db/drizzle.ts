@@ -1,32 +1,41 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import { pgTable, uuid, varchar, text, timestamp, boolean } from 'drizzle-orm/pg-core';
-import { sql } from 'drizzle-orm';
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  boolean,
+} from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // Users table
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  email: varchar('email', { length: 255 }).notNull().unique(),
-  password: varchar('password', { length: 255 }).notNull(),
-  full_name: varchar('full_name', { length: 255 }).notNull(),
-  phone: varchar('phone', { length: 20 }),
-  is_active: boolean('is_active').notNull().default(true),
-  created_at: timestamp('created_at').notNull().defaultNow(),
-  updated_at: timestamp('updated_at').notNull().defaultNow(),
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  password: varchar("password", { length: 255 }).notNull(),
+  full_name: varchar("full_name", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 20 }),
+  is_active: boolean("is_active").notNull().default(true),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // Tasks table
-export const tasks = pgTable('tasks', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  user_id: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  title: varchar('title', { length: 255 }).notNull(),
-  description: text('description'),
-  status: varchar('status', { length: 50 }).notNull().default('pending'),
-  priority: varchar('priority', { length: 50 }).notNull().default('medium'),
-  due_date: timestamp('due_date'),
-  completed_at: timestamp('completed_at'),
-  created_at: timestamp('created_at').notNull().defaultNow(),
-  updated_at: timestamp('updated_at').notNull().defaultNow(),
+export const tasks = pgTable("tasks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  status: varchar("status", { length: 50 }).notNull().default("pending"),
+  priority: varchar("priority", { length: 50 }).notNull().default("medium"),
+  due_date: timestamp("due_date"),
+  completed_at: timestamp("completed_at"),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // Types for tables
@@ -74,7 +83,7 @@ export class DrizzleDatabase {
     try {
       await this.db.execute(sql`SELECT 1`);
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -90,11 +99,11 @@ function parseDuration(duration: string): number {
   const unit = match[2];
 
   switch (unit) {
-    case 's':
+    case "s":
       return value * 1000;
-    case 'm':
+    case "m":
       return value * 60 * 1000;
-    case 'h':
+    case "h":
       return value * 60 * 60 * 1000;
     default:
       return 60000;
