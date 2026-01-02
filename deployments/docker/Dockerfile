@@ -1,5 +1,5 @@
 # Build stage
-FROM mirror.gcr.io/oven/bun:latests AS builder
+FROM mirror.gcr.io/oven/bun:latest AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y git make tini
