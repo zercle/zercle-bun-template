@@ -136,22 +136,27 @@ export function loadConfig(configPath?: string): Config {
       config.server.port = parseInt(process.env.SERVER_PORT, 10);
     if (process.env.SERVER_ENV) config.server.env = process.env.SERVER_ENV;
 
-    if (process.env.DATABASE_HOST) config.database.host = process.env.DATABASE_HOST;
+    if (process.env.DATABASE_HOST)
+      config.database.host = process.env.DATABASE_HOST;
     else if (process.env.DB_HOST) config.database.host = process.env.DB_HOST;
     if (process.env.DATABASE_PORT)
       config.database.port = parseInt(process.env.DATABASE_PORT, 10);
     else if (process.env.DB_PORT)
       config.database.port = parseInt(process.env.DB_PORT, 10);
-    if (process.env.DATABASE_USER) config.database.user = process.env.DATABASE_USER;
+    if (process.env.DATABASE_USER)
+      config.database.user = process.env.DATABASE_USER;
     else if (process.env.DB_USER) config.database.user = process.env.DB_USER;
     if (process.env.DATABASE_PASSWORD)
       config.database.password = process.env.DATABASE_PASSWORD;
     else if (process.env.DB_PASSWORD)
       config.database.password = process.env.DB_PASSWORD;
-    if (process.env.DATABASE_NAME) config.database.dbname = process.env.DATABASE_NAME;
+    if (process.env.DATABASE_NAME)
+      config.database.dbname = process.env.DATABASE_NAME;
     else if (process.env.DB_NAME) config.database.dbname = process.env.DB_NAME;
-    if (process.env.DATABASE_DRIVER) config.database.driver = process.env.DATABASE_DRIVER;
-    else if (process.env.DB_DRIVER) config.database.driver = process.env.DB_DRIVER;
+    if (process.env.DATABASE_DRIVER)
+      config.database.driver = process.env.DATABASE_DRIVER;
+    else if (process.env.DB_DRIVER)
+      config.database.driver = process.env.DB_DRIVER;
 
     if (process.env.JWT_SECRET) config.jwt.secret = process.env.JWT_SECRET;
     if (process.env.JWT_EXPIRATION)
