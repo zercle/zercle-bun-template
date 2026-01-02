@@ -27,8 +27,8 @@ WORKDIR /opt/app
 # Copy tini static binary from builder
 COPY --from=builder /usr/bin/tini-static /usr/bin/tini
 
-# Copy the compiled binary from the 'build' stage
-COPY --from=build /app/dist ./
+# Copy the compiled binary from the builder stage
+COPY --from=builder /app/dist ./
 
 # Expose port
 EXPOSE 3000
