@@ -1,5 +1,5 @@
-import { Context, Next } from 'hono';
-import { RateLimitConfig } from '../config/config.js';
+import type { Context, Next } from 'hono';
+import type { RateLimitConfig } from '../config/config.js';
 
 interface RateLimitEntry {
   count: number;

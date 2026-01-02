@@ -1,7 +1,8 @@
-import { Task, CreateTask, UpdateTask } from '../entity/task.js';
-import { DrizzleDatabase, tasks } from '../../../infrastructure/db/drizzle.js';
+import type { Task, CreateTask, UpdateTask } from '../entity/task.js';
+import type { DrizzleDatabase} from '../../../infrastructure/db/drizzle.js';
+import { tasks } from '../../../infrastructure/db/drizzle.js';
 import { eq, and, desc } from 'drizzle-orm';
-import { Logger } from '../../../infrastructure/logger/logger.js';
+import type { Logger } from '../../../infrastructure/logger/logger.js';
 
 export interface ITaskRepository {
   create(task: CreateTask): Promise<Task>;

@@ -1,7 +1,8 @@
-import { User, CreateUser, UpdateUser } from '../entity/user.js';
-import { DrizzleDatabase, users } from '../../../infrastructure/db/drizzle.js';
+import type { User, CreateUser, UpdateUser } from '../entity/user.js';
+import type { DrizzleDatabase} from '../../../infrastructure/db/drizzle.js';
+import { users } from '../../../infrastructure/db/drizzle.js';
 import { eq, desc } from 'drizzle-orm';
-import { Logger } from '../../../infrastructure/logger/logger.js';
+import type { Logger } from '../../../infrastructure/logger/logger.js';
 
 export interface IUserRepository {
   create(user: CreateUser): Promise<User>;

@@ -1,9 +1,10 @@
-import { Context } from 'hono';
-import { ITaskService, ErrTaskNotFound, ErrUnauthorizedTask } from '../usecase/task.js';
+import type { Context } from 'hono';
+import type { ITaskService} from '../usecase/task.js';
+import { ErrTaskNotFound, ErrUnauthorizedTask } from '../usecase/task.js';
 import { createTaskSchema, updateTaskSchema } from '../request/task.js';
 import { success, created, noContent, badRequest, notFound, forbidden, internalError } from '../../../utils/response.js';
 import { getRequestID, getUserId } from '../../../infrastructure/middleware/auth.js';
-import { Logger } from '../../../infrastructure/logger/logger.js';
+import type { Logger } from '../../../infrastructure/logger/logger.js';
 
 export class TaskHandler {
   constructor(

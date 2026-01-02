@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
-import { Config } from './infrastructure/config/config.js';
+import type { Config } from './infrastructure/config/config.js';
 import { DrizzleDatabase } from './infrastructure/db/drizzle.js';
 import { Logger } from './infrastructure/logger/logger.js';
 import { Passworder } from './infrastructure/password/passworder.js';

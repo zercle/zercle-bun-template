@@ -1,5 +1,5 @@
-import { Context, Next } from 'hono';
-import { Logger } from '../logger/logger.js';
+import type { Context, Next } from 'hono';
+import type { Logger } from '../logger/logger.js';
 import { getRequestID } from './request-id.js';
 
 export function createLoggerMiddleware(logger: Logger) {

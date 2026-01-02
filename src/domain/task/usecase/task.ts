@@ -1,8 +1,9 @@
-import { Task, CreateTask, UpdateTask } from '../entity/task.js';
-import { ITaskRepository } from '../repository/task.js';
-import { CreateTask as CreateTaskDTO, UpdateTask as UpdateTaskDTO } from '../request/task.js';
-import { TaskResponse, ListTasksResponse } from '../response/task.js';
-import { Logger } from '../../../infrastructure/logger/logger.js';
+import type { CreateTask, UpdateTask } from '../entity/task.js';
+import { Task } from '../entity/task.js';
+import type { ITaskRepository } from '../repository/task.js';
+import type { CreateTask as CreateTaskDTO, UpdateTask as UpdateTaskDTO } from '../request/task.js';
+import type { TaskResponse, ListTasksResponse } from '../response/task.js';
+import type { Logger } from '../../../infrastructure/logger/logger.js';
 
 export class ErrTaskNotFound extends Error {
   constructor() {

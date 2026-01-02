@@ -1,4 +1,4 @@
-import { Context, Next } from 'hono';
+import type { Context, Next } from 'hono';
 import { randomUUID } from 'crypto';
 
 export function createRequestIDMiddleware() {

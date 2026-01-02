@@ -1,10 +1,11 @@
-import { Context } from 'hono';
+import type { Context } from 'hono';
 import { zValidator } from '@hono/zod-validator';
-import { IUserService, ErrUserNotFound, ErrUserAlreadyExists, ErrInvalidCredentials } from '../usecase/user.js';
+import type { IUserService} from '../usecase/user.js';
+import { ErrUserNotFound, ErrUserAlreadyExists, ErrInvalidCredentials } from '../usecase/user.js';
 import { registerUserSchema, loginUserSchema, updateUserSchema } from '../request/user.js';
 import { success, created, noContent, badRequest, unauthorized, notFound, conflict, internalError } from '../../../utils/response.js';
 import { getRequestID, getUserId } from '../../../infrastructure/middleware/auth.js';
-import { Logger } from '../../../infrastructure/logger/logger.js';
+import type { Logger } from '../../../infrastructure/logger/logger.js';
 
 export class UserHandler {
   constructor(

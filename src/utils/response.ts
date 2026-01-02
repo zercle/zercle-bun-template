@@ -1,4 +1,4 @@
-import { Context } from 'hono';
+import type { Context } from 'hono';
 
 export interface JSendResponse<T = unknown> {
   status: 'success' | 'fail' | 'error';

@@ -138,8 +138,21 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Start test database
+        run: docker-compose -f deployments/docker/docker-compose.test.yml up -d
+
+      - name: Wait for database to be ready
+        uses: watchable/await-action@v1
+        with:
+          selector: "test-db"
+          condition: "service_healthy"
+          timeout: 60
+
       - name: Run integration tests
-        run: bun test
+        run: bun run test:integration
+
+      - name: Stop and clean up test database
+        run: docker-compose -f deployments/docker/docker-compose.test.yml down -v
 
   test-coverage:
     name: Test Coverage
@@ -207,6 +220,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
-        run: |
-          docker build -t zercle-bun-template:test -f deployments/docker/Dockerfile .
-          docker images zercle-bun-template:test
+        run: docker-compose -f deployments/docker/docker-compose.yml build
+
+      - name: List Docker images
+        run: docker images

@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15-alpine
+    image: mirror.gcr.io/postgres:18-alpine
     container_name: zercle-postgres
     environment:
       POSTGRES_USER: postgres

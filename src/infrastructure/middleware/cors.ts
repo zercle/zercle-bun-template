@@ -1,6 +1,6 @@
 import { Context, Next } from 'hono';
 import { cors } from 'hono/cors';
-import { CORSConfig } from '../config/config.js';
+import type { CORSConfig } from '../config/config.js';
 
 export function createCorsMiddleware(config: CORSConfig) {
   return cors({

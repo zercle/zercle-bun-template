@@ -1,10 +1,11 @@
-import { User, CreateUser, UpdateUser } from '../entity/user.js';
-import { IUserRepository } from '../repository/user.js';
-import { RegisterUser, LoginUser } from '../request/user.js';
-import { UserResponse, LoginResponse, ListUsersResponse } from '../response/user.js';
-import { JWTConfig } from '../../../infrastructure/config/config.js';
-import { Passworder } from '../../../infrastructure/password/passworder.js';
-import { Logger } from '../../../infrastructure/logger/logger.js';
+import type { CreateUser, UpdateUser } from '../entity/user.js';
+import { User } from '../entity/user.js';
+import type { IUserRepository } from '../repository/user.js';
+import type { RegisterUser, LoginUser } from '../request/user.js';
+import type { UserResponse, LoginResponse, ListUsersResponse } from '../response/user.js';
+import type { JWTConfig } from '../../../infrastructure/config/config.js';
+import type { Passworder } from '../../../infrastructure/password/passworder.js';
+import type { Logger } from '../../../infrastructure/logger/logger.js';
 import { generateToken } from '../../../infrastructure/middleware/auth.js';
 
 export class ErrUserNotFound extends Error {

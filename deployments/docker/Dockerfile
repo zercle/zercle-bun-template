@@ -1,5 +1,8 @@
 # Build stage
-FROM oven/bun:1 AS builder
+FROM mirror.gcr.io/oven/bun:latests AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y git make tini
 
 WORKDIR /app
 
@@ -10,36 +13,27 @@ RUN bun install --frozen-lockfile --production
 # Copy source code
 COPY . .
 
-# Build the application
-RUN bun build src/main.ts --outdir ./dist
+# Compile your application into a single executable binary
+RUN bun build src/main.ts --compile --minify --outfile ./dist/bun-app
 
-# Runtime stage
-FROM oven/bun:1 AS runtime
+# Final stage - distroless minimal runtime
+FROM gcr.io/distroless/base AS runner
 
-WORKDIR /app
+ENV TZ=Asia/Bangkok
+ENV LANG=C.UTF-8
 
-# Install runtime dependencies only
-COPY package.json bun.lockb ./
-RUN bun install --frozen-lockfile --production
+WORKDIR /opt/app
 
-# Copy built application from builder
-COPY --from=builder /app/dist ./dist
+# Copy tini static binary from builder
+COPY --from=builder /usr/bin/tini-static /usr/bin/tini
 
-# Create non-root user
-RUN addgroup -g 1001 -S bun && \
-    adduser -S -u 1001 -G bun bun
-
-# Change ownership
-RUN chown -R bun:bun /app
-
-USER bun
+# Copy the compiled binary from the 'build' stage
+COPY --from=build /app/dist ./
 
 # Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD bun --version || exit 1
-
 # Run the application
-CMD ["bun", "run", "dist/main.js"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+CMD ["./bun-app"]
