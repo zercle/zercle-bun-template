@@ -25,12 +25,12 @@ services:
       SERVER_ENV: prod
       SERVER_PORT: 3000
       SERVER_HOST: 0.0.0.0
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: postgres
-      DB_DRIVER: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      DATABASE_NAME: postgres
+      DATABASE_DRIVER: postgres
       JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
       JWT_EXPIRATION: 3600
       LOG_LEVEL: info
@@ -46,7 +46,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
