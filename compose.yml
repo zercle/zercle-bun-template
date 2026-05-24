@@ -1,0 +1,124 @@
+services:
+  traefik:
+    image: mirror.gcr.io/traefik:v3
+    container_name: zercle-bun-template-traefik
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:3000"
+      - "--log.level=INFO"
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - zercle-bun-network
+    restart: unless-stopped
+
+  postgres:
+    image: mirror.gcr.io/postgres:18-alpine
+    container_name: zercle-bun-template-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: zercle_chat
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d zercle_chat"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - zercle-bun-network
+    restart: unless-stopped
+
+  valkey:
+    image: mirror.gcr.io/valkey:9-alpine
+    container_name: zercle-bun-template-valkey
+    command: valkey-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zercle-bun-network
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zercle-bun-template-api
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: zercle_chat
+      DB_SSLMODE: disable
+      CACHE_HOST: valkey
+      CACHE_PORT: 6379
+      AUTH_ACCESS_TOKEN_SECRET: change-me-in-production
+      AUTH_REFRESH_TOKEN_SECRET: change-me-too-in-production
+      AUTH_ACCESS_TOKEN_TTL: 15m
+      AUTH_REFRESH_TOKEN_TTL: 168h
+      AUTH_ISSUER: zercle-bun-template
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      APP_ENVIRONMENT: production
+    ports:
+      - "8080:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    networks:
+      - zercle-bun-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.app.rule=Host(`app.localhost`)"
+      - "traefik.http.routers.app.entrypoints=web"
+      - "traefik.http.services.app.loadbalancer.server.port=3000"
+
+  dbgate:
+    image: mirror.gcr.io/dbgate:latest
+    container_name: zercle-bun-template-dbgate
+    environment:
+      CONNECTIONS: >
+        [
+          {"type":"postgres","name":"PostgreSQL","host":"postgres","port":5432,"user":"postgres","password":"postgres","database":"zercle_chat"},
+          {"type":"redis","name":"Valkey","host":"valkey","port":6379}
+        ]
+    networks:
+      - zercle-bun-network
+    restart: unless-stopped
+    profiles:
+      - tools
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dbgate.rule=Host(`db.localhost`)"
+      - "traefik.http.routers.dbgate.entrypoints=web"
+      - "traefik.http.services.dbgate.loadbalancer.server.port=3000"
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  zercle-bun-network:
+    driver: bridge
