@@ -77,6 +77,32 @@ const durationSeconds = z.union([z.string(), z.number()]).transform((v, ctx) => 
   }
 });
 
+// ---------- byte size handling -----------------------------------------------
+
+const SIZE_RE = /^\s*(\d+(?:\.\d+)?)\s*([KMG])?(I?B?)?\s*$/i;
+
+/**
+ * Parse a human-friendly byte size string into a raw byte count.
+ *
+ * Accepts:
+ *   - bare numeric strings (`"1024"` -> 1024)
+ *   - suffixed strings (`"1K"`, `"1M"`, `"1G"`, case-insensitive, with an
+ *     optional trailing `I` and/or `B` like `"1MiB"` or `"1KB"`)
+ *
+ * Returns the byte count, or `0` (i.e. "skip") for empty or unparseable input.
+ * Mirrors the Go template's `parseBodyLimitBytes` in `internal/shared/server/http.go`.
+ */
+export function parseBodyLimitBytes(s: string): number {
+  const match = SIZE_RE.exec(s);
+  if (!match) return 0;
+  const n = Number(match[1]);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  const unit = (match[2] ?? "").toUpperCase();
+  const mult =
+    unit === "K" ? 1024 : unit === "M" ? 1024 * 1024 : unit === "G" ? 1024 * 1024 * 1024 : 1;
+  return n * mult;
+}
+
 // ---------- enums -------------------------------------------------------------
 
 const EnvironmentEnum = z.enum(["development", "staging", "production", "test"]);

@@ -64,6 +64,33 @@ describe("ItemServiceImpl", () => {
       await expect(svc.create("")).rejects.toBe(ErrInvalidName);
       expect(repo.create).not.toHaveBeenCalled();
     });
+
+    it("counts length by Unicode code points, not UTF-16 units (matches Go's utf8.RuneCountInString)", async () => {
+      vi.mocked(repo.create).mockResolvedValueOnce(fixedItem("🎉🎉🎉"));
+
+      // 3 emoji code points, but 6 UTF-16 code units (each surrogate pair = 2).
+      // maxNameLength=255 would be exceeded by `name.length` (6 < 255 here,
+      // so use a smaller limit to prove the point).
+      const tight = new ItemServiceImpl(repo, {
+        defaultPageSize: 20,
+        maxPageSize: 100,
+        maxNameLength: 3,
+      });
+      const item = await tight.create("🎉🎉🎉");
+      expect(item.name).toBe("🎉🎉🎉");
+      expect(repo.create).toHaveBeenCalledOnce();
+    });
+
+    it("rejects a multi-code-point name whose code-point count exceeds maxNameLength", async () => {
+      const tight = new ItemServiceImpl(repo, {
+        defaultPageSize: 20,
+        maxPageSize: 100,
+        maxNameLength: 2,
+      });
+      // 3 emoji code points, 6 UTF-16 code units.
+      await expect(tight.create("🎉🎉🎉")).rejects.toBe(ErrInvalidName);
+      expect(repo.create).not.toHaveBeenCalled();
+    });
   });
 
   describe("get", () => {

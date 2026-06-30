@@ -3,7 +3,9 @@ import { z } from "zod";
 import type { Item } from "../domain/item.ts";
 
 export const CreateItemRequest = z.object({
-  name: z.string().min(1).max(255),
+  // No hardcoded max — the service-level `max_name_length` config is the
+  // real authority. The 4096 ceiling is a generous safety guard only.
+  name: z.string().min(1).max(4096),
 });
 
 export const ItemResponse = z.object({

@@ -5,6 +5,7 @@ import {
   dbConnString,
   httpAddr,
   loadConfig,
+  parseBodyLimitBytes,
   parseDurationToSeconds,
   valkeyAddr,
 } from "./config";
@@ -38,6 +39,32 @@ describe("parseDurationToSeconds", () => {
 
   it("rejects garbage input", () => {
     expect(() => parseDurationToSeconds("nope")).toThrow(ConfigError);
+  });
+});
+
+describe("parseBodyLimitBytes", () => {
+  it("parses bare numeric strings as raw bytes", () => {
+    expect(parseBodyLimitBytes("1024")).toBe(1024);
+    expect(parseBodyLimitBytes("0")).toBe(0);
+  });
+
+  it("parses K, M, G suffixes (case-insensitive)", () => {
+    expect(parseBodyLimitBytes("1K")).toBe(1024);
+    expect(parseBodyLimitBytes("2k")).toBe(2 * 1024);
+    expect(parseBodyLimitBytes("1M")).toBe(1024 * 1024);
+    expect(parseBodyLimitBytes("1G")).toBe(1024 * 1024 * 1024);
+  });
+
+  it("accepts trailing I and B (e.g. MiB, KB)", () => {
+    expect(parseBodyLimitBytes("1KB")).toBe(1024);
+    expect(parseBodyLimitBytes("1MiB")).toBe(1024 * 1024);
+  });
+
+  it("returns 0 for empty or unparseable input", () => {
+    expect(parseBodyLimitBytes("")).toBe(0);
+    expect(parseBodyLimitBytes("   ")).toBe(0);
+    expect(parseBodyLimitBytes("nope")).toBe(0);
+    expect(parseBodyLimitBytes("1X")).toBe(0);
   });
 });
 

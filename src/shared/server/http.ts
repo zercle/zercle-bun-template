@@ -7,10 +7,10 @@
  *   2. register observability routes
  *   3. route unhandled errors through the shared `httpError` mapper
  */
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import type pino from "pino";
 import type { Container } from "../../app/container.ts";
-import { type Config, ConfigKey } from "../../config/config.ts";
+import { type Config, ConfigKey, parseBodyLimitBytes } from "../../config/config.ts";
 import { httpError } from "../errors/mapper.ts";
 import { accessLog, cors, getRequestId, otel, recover, requestId } from "../middleware/index.ts";
 import {
@@ -39,6 +39,24 @@ export function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 /**
+ * Reject requests whose declared `Content-Length` exceeds `limit` bytes.
+ * Mirrors echo's `echomw.BodyLimit`: we only inspect the header (not the body
+ * stream) and short-circuit with 413 + an AppError-shaped JSON body.
+ */
+export function bodyLimit(limit: number): MiddlewareHandler {
+  return async (c, next) => {
+    const raw = c.req.header("content-length");
+    if (raw !== undefined) {
+      const len = Number(raw);
+      if (Number.isFinite(len) && len > limit) {
+        return c.json({ error: "INVALID_INPUT", message: "request body too large" }, 413);
+      }
+    }
+    await next();
+  };
+}
+
+/**
  * Build the Hono app with the standard middleware stack and observability
  * routes. The returned `Hono` instance is safe to drive directly with
  * `app.request(...)` in tests, or to hand to `Bun.serve` in production.
@@ -54,6 +72,9 @@ export function buildApp(container: Container): Hono {
   app.use("*", otel());
   app.use("*", accessLog(logger));
   app.use("*", cors(cfg));
+  if (parseBodyLimitBytes(cfg.http.body_limit) > 0) {
+    app.use("*", bodyLimit(parseBodyLimitBytes(cfg.http.body_limit)));
+  }
   app.use("*", recover(logger));
 
   app.onError((err, c) => {

@@ -50,6 +50,18 @@ export const ErrConflict: AppError = new AppError({
   httpStatus: 409,
 });
 
+export const ErrCanceled: AppError = new AppError({
+  code: "CANCELED",
+  message: "request canceled",
+  httpStatus: 499,
+});
+
+export const ErrDeadlineExceeded: AppError = new AppError({
+  code: "DEADLINE_EXCEEDED",
+  message: "deadline exceeded",
+  httpStatus: 504,
+});
+
 export const ErrInternal: AppError = new AppError({
   code: "INTERNAL",
   message: "internal error",

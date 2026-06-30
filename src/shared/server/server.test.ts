@@ -123,3 +123,40 @@ describe("buildApp", () => {
     expect(body.error).toBe("INTERNAL");
   });
 });
+
+describe("buildApp — body limit", () => {
+  it("passes requests whose Content-Length is at or under the limit", async () => {
+    const { app } = await makeApp({ body_limit: "1K" });
+    app.post("/echo", (c) => c.text("ok"));
+    const res = await app.request("/echo", {
+      method: "POST",
+      headers: { "content-length": "512" },
+      body: "x".repeat(512),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 413 INVALID_INPUT when Content-Length exceeds the limit", async () => {
+    const { app } = await makeApp({ body_limit: "1K" });
+    app.post("/echo", (c) => c.text("ok"));
+    const res = await app.request("/echo", {
+      method: "POST",
+      headers: { "content-length": "2048" },
+      body: "x".repeat(2048),
+    });
+    expect(res.status).toBe(413);
+    const body = (await res.json()) as { error: string; message: string };
+    expect(body).toEqual({ error: "INVALID_INPUT", message: "request body too large" });
+  });
+
+  it("disables the body limit when the configured value is empty/garbage", async () => {
+    const { app } = await makeApp({ body_limit: "nope" });
+    app.post("/echo", (c) => c.text("ok"));
+    const res = await app.request("/echo", {
+      method: "POST",
+      headers: { "content-length": "1048576" },
+      body: "x".repeat(1024),
+    });
+    expect(res.status).toBe(200);
+  });
+});

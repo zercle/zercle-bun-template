@@ -18,7 +18,10 @@ export class ItemServiceImpl implements ItemService {
 
   async create(name: string): Promise<Item> {
     name = name.trim();
-    if (name.length === 0 || name.length > this.limits.maxNameLength) {
+    // Count by Unicode code points (matches Go's utf8.RuneCountInString).
+    // `name.length` would count UTF-16 code units and split surrogate pairs.
+    const codePointCount = [...name].length;
+    if (codePointCount === 0 || codePointCount > this.limits.maxNameLength) {
       throw ErrInvalidName;
     }
     const now = new Date();
