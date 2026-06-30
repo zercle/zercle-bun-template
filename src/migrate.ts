@@ -75,5 +75,7 @@ function printUsage(): void {
   console.log("usage: migrate [up|status]");
 }
 
-const exitCode = await runMigrate(process.argv.slice(2));
-process.exit(exitCode);
+if (import.meta.main) {
+  const exitCode = await runMigrate(process.argv.slice(2));
+  process.exit(exitCode);
+}

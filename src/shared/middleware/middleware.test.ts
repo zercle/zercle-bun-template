@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { pino } from "pino";
 import { describe, expect, it, vi } from "vitest";
 import type { Config } from "../../config/config.ts";
+import { httpError } from "../errors/mapper.ts";
 import { accessLog } from "./access-log.ts";
 import { getRequestId } from "./context.ts";
 import { cors } from "./cors.ts";
@@ -110,11 +111,15 @@ describe("requestId middleware", () => {
 });
 
 describe("recover middleware", () => {
-  it("returns a 500 INTERNAL response when a handler throws", async () => {
+  it("logs the panic and delegates to onError, which maps to 500 INTERNAL", async () => {
     const logger = pino({ level: "silent" });
     const errorSpy = vi.spyOn(logger, "error");
     const app = new Hono();
     app.use("*", recover(logger));
+    app.onError((err, c) => {
+      const { status, body } = httpError(err);
+      return c.json(body, status as 500);
+    });
     app.get("/boom", () => {
       throw new Error("kaboom");
     });

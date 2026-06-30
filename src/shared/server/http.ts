@@ -8,6 +8,7 @@
  *   3. route unhandled errors through the shared `httpError` mapper
  */
 import { Hono, type MiddlewareHandler } from "hono";
+import { bodyLimit as honoBodyLimit } from "hono/body-limit";
 import type pino from "pino";
 import type { Container } from "../../app/container.ts";
 import { type Config, ConfigKey, parseBodyLimitBytes } from "../../config/config.ts";
@@ -39,21 +40,18 @@ export function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 }
 
 /**
- * Reject requests whose declared `Content-Length` exceeds `limit` bytes.
- * Mirrors echo's `echomw.BodyLimit`: we only inspect the header (not the body
- * stream) and short-circuit with 413 + an AppError-shaped JSON body.
+ * Enforce a maximum request body size in bytes. Delegates to Hono's built-in
+ * `bodyLimit`, which wraps the request body stream — so the limit is enforced
+ * even when the client omits `Content-Length` (e.g. chunked transfer encoding).
+ * Over-limit requests short-circuit with 413 + an AppError-shaped JSON body.
  */
 export function bodyLimit(limit: number): MiddlewareHandler {
-  return async (c, next) => {
-    const raw = c.req.header("content-length");
-    if (raw !== undefined) {
-      const len = Number(raw);
-      if (Number.isFinite(len) && len > limit) {
-        return c.json({ error: "INVALID_INPUT", message: "request body too large" }, 413);
-      }
-    }
-    await next();
-  };
+  return honoBodyLimit({
+    maxSize: limit,
+    onError: (c) => {
+      return c.json({ error: "INVALID_INPUT", message: "request body too large" }, 413);
+    },
+  });
 }
 
 /**
@@ -85,17 +83,12 @@ export function buildApp(container: Container): Hono {
   const probeTimeoutMs = cfg.http.health_probe_timeout * 1000;
 
   app.get("/healthz", async (c) => {
-    const ok = await Promise.race([
-      health.live().then(
-        () => true,
-        () => false,
-      ),
-      withTimeout(Promise.reject(new Error("probe timeout")), probeTimeoutMs).catch(() => false),
-    ]);
-    if (ok) {
+    try {
+      await withTimeout(health.live(), probeTimeoutMs);
       return c.body(null, 200);
+    } catch {
+      return c.body(null, 500);
     }
-    return c.body(null, 500);
   });
 
   app.get("/readyz", async (c) => {
