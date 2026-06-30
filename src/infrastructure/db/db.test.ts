@@ -122,11 +122,18 @@ describe("createDB", () => {
     expect(opts.ssl).toBe(false);
   });
 
-  it("does not require verification when ssl_mode is require", async () => {
+  it("passes the 'require' string to postgres when ssl_mode is require", async () => {
     const { __factory } = await loadPostgresMock();
     await createDB({ ...fullCfg, db: { ...fullCfg.db, ssl_mode: "require" } });
-    const opts = __factory.mock.calls.at(-1)?.[1] as { ssl: { rejectUnauthorized: boolean } };
-    expect(opts.ssl.rejectUnauthorized).toBe(false);
+    const opts = __factory.mock.calls.at(-1)?.[1] as { ssl: unknown };
+    expect(opts.ssl).toBe("require");
+  });
+
+  it("passes the 'prefer' string to postgres when ssl_mode is prefer", async () => {
+    const { __factory } = await loadPostgresMock();
+    await createDB({ ...fullCfg, db: { ...fullCfg.db, ssl_mode: "prefer" } });
+    const opts = __factory.mock.calls.at(-1)?.[1] as { ssl: unknown };
+    expect(opts.ssl).toBe("prefer");
   });
 
   it("requires verification when ssl_mode is verify-ca", async () => {

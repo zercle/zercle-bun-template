@@ -19,7 +19,7 @@ export function requestId(): MiddlewareHandler {
     const incoming = c.req.header(REQUEST_ID_HEADER) ?? "";
     const id = isValidRequestId(incoming) ? incoming : crypto.randomUUID();
 
-    c.res.headers.set(REQUEST_ID_HEADER, id);
+    c.header(REQUEST_ID_HEADER, id);
 
     await runWithRequestId(id, async () => {
       await next();

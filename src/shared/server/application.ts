@@ -60,26 +60,26 @@ export class Application {
   private async stopServer(timeoutMs: number): Promise<void> {
     const server = this.server;
     if (!server) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const force = new Promise<void>((resolve) => {
-      timer = setTimeout(() => {
-        try {
-          server.stop(true);
-        } catch {
-          // ignore double-stop
-        }
-        resolve();
-      }, timeoutMs);
-    });
-    try {
-      await Promise.race([server.stop(), force]);
-    } catch {
-      // bun.serve.stop() resolves immediately once close is initiated;
-      // any error here is non-fatal for shutdown.
-    } finally {
-      if (timer !== undefined) clearTimeout(timer);
-      this.server = undefined;
+
+    // Stop accepting new connections. Bun's server.stop() is synchronous;
+    // passing `false` initiates a drain without forcibly closing active
+    // sockets, so we must poll pendingRequests ourselves.
+    server.stop(false);
+
+    const start = Date.now();
+    while (server.pendingRequests > 0 && Date.now() - start < timeoutMs) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
+
+    // Force-close any connections still active after the timeout.
+    if (server.pendingRequests > 0) {
+      try {
+        server.stop(true);
+      } catch {
+        // ignore double-stop
+      }
+    }
+    this.server = undefined;
   }
 
   private async closeDB(): Promise<void> {

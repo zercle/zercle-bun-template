@@ -23,10 +23,12 @@ export async function createDB(cfg: Config): Promise<DBHandle> {
     ssl:
       cfg.db.ssl_mode === "disable"
         ? false
-        : {
-            rejectUnauthorized:
-              cfg.db.ssl_mode === "verify-ca" || cfg.db.ssl_mode === "verify-full",
-          },
+        : cfg.db.ssl_mode === "prefer" || cfg.db.ssl_mode === "require"
+          ? cfg.db.ssl_mode
+          : {
+              rejectUnauthorized:
+                cfg.db.ssl_mode === "verify-ca" || cfg.db.ssl_mode === "verify-full",
+            },
   });
 
   const db = drizzle(sql, { schema });

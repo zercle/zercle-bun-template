@@ -19,14 +19,19 @@ import {
   TracerKey,
 } from "../telemetry/index.ts";
 
-const { serveMock, buildAppMock } = vi.hoisted(() => {
-  const stopFn = vi.fn().mockResolvedValue(undefined);
-  const stopTrueFn = vi.fn();
+const { serveMock, buildAppMock, stopFn } = vi.hoisted(() => {
+  const stopFn = vi.fn();
+  let pending = 0;
   const serveMock = vi.fn(() => ({
     hostname: "127.0.0.1",
     port: 9999,
     stop: stopFn,
-    stopTrue: stopTrueFn,
+    get pendingRequests() {
+      return pending;
+    },
+    __setPending(n: number) {
+      pending = n;
+    },
   }));
   const buildAppMock = vi.fn(
     () =>
@@ -34,7 +39,7 @@ const { serveMock, buildAppMock } = vi.hoisted(() => {
         fetch: vi.fn(),
       }) as unknown as Hono,
   );
-  return { serveMock, buildAppMock };
+  return { serveMock, buildAppMock, stopFn };
 });
 
 vi.mock("../server/http.ts", async (importOriginal) => {
@@ -104,6 +109,7 @@ function makeContainer(cfg = makeConfig()): {
 beforeEach(() => {
   serveMock.mockClear();
   buildAppMock.mockClear();
+  stopFn.mockClear();
   (globalThis as { Bun: unknown }).Bun = { serve: serveMock };
 });
 
