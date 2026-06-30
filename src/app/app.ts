@@ -75,9 +75,11 @@ export async function run(): Promise<void> {
     logger.info({ sig }, "shutdown signal received");
     try {
       await application.stop();
-    } finally {
-      process.exit(0);
+    } catch (err) {
+      logger.error({ err, sig }, "shutdown failed");
+      process.exit(1);
     }
+    process.exit(0);
   };
 
   process.on("SIGTERM", () => {

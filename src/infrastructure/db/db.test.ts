@@ -7,8 +7,10 @@ vi.mock("postgres", () => {
   const sqlFn = vi.fn(() => Promise.resolve([]));
   const endFn = vi.fn(() => Promise.resolve());
   const fakeSql = Object.assign(sqlFn, { end: endFn });
+  const factory = vi.fn((_opts: unknown) => fakeSql);
   return {
-    default: () => fakeSql,
+    default: factory,
+    __factory: factory,
     __sqlFn: sqlFn,
     __endFn: endFn,
   };
@@ -82,6 +84,7 @@ afterEach(() => {
 });
 
 interface PostgresMock {
+  __factory: ReturnType<typeof vi.fn>;
   __sqlFn: ReturnType<typeof vi.fn>;
   __endFn: ReturnType<typeof vi.fn>;
 }
@@ -110,6 +113,34 @@ describe("createDB", () => {
     expect(handle.sql).toBeDefined();
 
     await handle.end();
+  });
+
+  it("disables SSL when ssl_mode is disable", async () => {
+    const { __factory } = await loadPostgresMock();
+    await createDB(fullCfg);
+    const opts = __factory.mock.calls.at(-1)?.[1] as { ssl: unknown };
+    expect(opts.ssl).toBe(false);
+  });
+
+  it("does not require verification when ssl_mode is require", async () => {
+    const { __factory } = await loadPostgresMock();
+    await createDB({ ...fullCfg, db: { ...fullCfg.db, ssl_mode: "require" } });
+    const opts = __factory.mock.calls.at(-1)?.[1] as { ssl: { rejectUnauthorized: boolean } };
+    expect(opts.ssl.rejectUnauthorized).toBe(false);
+  });
+
+  it("requires verification when ssl_mode is verify-ca", async () => {
+    const { __factory } = await loadPostgresMock();
+    await createDB({ ...fullCfg, db: { ...fullCfg.db, ssl_mode: "verify-ca" } });
+    const opts = __factory.mock.calls.at(-1)?.[1] as { ssl: { rejectUnauthorized: boolean } };
+    expect(opts.ssl.rejectUnauthorized).toBe(true);
+  });
+
+  it("requires verification when ssl_mode is verify-full", async () => {
+    const { __factory } = await loadPostgresMock();
+    await createDB({ ...fullCfg, db: { ...fullCfg.db, ssl_mode: "verify-full" } });
+    const opts = __factory.mock.calls.at(-1)?.[1] as { ssl: { rejectUnauthorized: boolean } };
+    expect(opts.ssl.rejectUnauthorized).toBe(true);
   });
 });
 

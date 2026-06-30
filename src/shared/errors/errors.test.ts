@@ -132,4 +132,22 @@ describe("httpError", () => {
     expect(result.status).toBe(499);
     expect(result.status).not.toBe(500);
   });
+
+  it("terminates instead of looping forever on a cyclic cause chain", () => {
+    const a = new Error("a");
+    const b = new Error("b", { cause: a });
+    a.cause = b;
+    registerSentinel(a, ErrNotFound);
+    let result: ReturnType<typeof httpError> | undefined;
+    const guard = setTimeout(() => {
+      throw new Error("httpError hung on cyclic cause chain");
+    }, 1000);
+    try {
+      result = httpError(b);
+    } finally {
+      clearTimeout(guard);
+    }
+    expect(result?.status).toBe(404);
+    expect(result?.body).toEqual({ error: "NOT_FOUND", message: "resource not found" });
+  });
 });

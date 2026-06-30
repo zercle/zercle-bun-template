@@ -20,7 +20,13 @@ export async function createDB(cfg: Config): Promise<DBHandle> {
     max: cfg.db.max_conns,
     idle_timeout: cfg.db.max_conn_idle,
     connect_timeout: cfg.db.connect_timeout,
-    ssl: cfg.db.ssl_mode !== "disable" ? { rejectUnauthorized: false } : false,
+    ssl:
+      cfg.db.ssl_mode === "disable"
+        ? false
+        : {
+            rejectUnauthorized:
+              cfg.db.ssl_mode === "verify-ca" || cfg.db.ssl_mode === "verify-full",
+          },
   });
 
   const db = drizzle(sql, { schema });

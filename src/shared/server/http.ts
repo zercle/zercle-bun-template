@@ -67,13 +67,13 @@ export function buildApp(container: Container): Hono {
   const app = new Hono();
 
   app.use("*", requestId());
+  app.use("*", recover(logger));
   app.use("*", otel());
   app.use("*", accessLog(logger));
   app.use("*", cors(cfg));
   if (parseBodyLimitBytes(cfg.http.body_limit) > 0) {
     app.use("*", bodyLimit(parseBodyLimitBytes(cfg.http.body_limit)));
   }
-  app.use("*", recover(logger));
 
   app.onError((err, c) => {
     const { status, body } = httpError(err);
