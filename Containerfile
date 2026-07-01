@@ -1,17 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # -----------------------------------------------------------------------------
-# deps — install production node_modules (runtime deps only)
-# -----------------------------------------------------------------------------
-FROM oven/bun:1 AS deps
-
-WORKDIR /app
-
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile --production
-
-# -----------------------------------------------------------------------------
-# builder — typecheck gate (Bun runs TS directly; no compile step)
+# builder — install deps, typecheck gate, compile standalone executables
 # -----------------------------------------------------------------------------
 FROM oven/bun:1 AS builder
 
@@ -27,20 +17,23 @@ COPY package.json tsconfig.json config.yaml ./
 
 RUN bun run typecheck
 
+# Compile self-contained Linux executables (embeds Bun runtime + all JS deps).
+# No node_modules needed in the final image.
+RUN bun build --compile src/main.ts --outfile main
+
 # -----------------------------------------------------------------------------
-# final — slim runtime image, non-root
+# final — distroless, non-root, no node_modules
 # -----------------------------------------------------------------------------
-FROM oven/bun:1-slim AS final
+FROM gcr.io/distroless/base-debian13:nonroot AS final
 
 WORKDIR /app
 
-COPY --from=deps --chown=bun:bun /app/node_modules ./node_modules
-COPY --from=builder --chown=bun:bun /app/src ./src
-COPY --from=builder --chown=bun:bun /app/migrations ./migrations
-COPY --from=builder --chown=bun:bun /app/package.json /app/tsconfig.json /app/config.yaml ./
+COPY --from=builder --chown=nonroot:nonroot /app/main /app/main
+COPY --from=builder --chown=nonroot:nonroot /app/migrations ./migrations
+COPY --from=builder --chown=nonroot:nonroot /app/config.yaml /app/config.yaml
 
-USER bun
+USER nonroot:nonroot
 
 EXPOSE 8080
 
-ENTRYPOINT ["bun", "run", "src/main.ts"]
+ENTRYPOINT ["/app/main"]
