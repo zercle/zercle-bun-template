@@ -34,6 +34,10 @@ export function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   const timeout = new Promise<T>((_, reject) => {
     timer = setTimeout(() => reject(new Error("probe timeout")), ms);
   });
+  // Attach a persistent handler so a late rejection from `p` (after the
+  // timeout has already settled the race) does not surface as an
+  // unhandledRejection. The race result is unaffected.
+  p.catch(() => {});
   return Promise.race([p, timeout]).finally(() => {
     if (timer !== undefined) clearTimeout(timer);
   });
@@ -71,8 +75,9 @@ export function buildApp(container: Container): Hono {
   app.use("*", otel());
   app.use("*", accessLog(logger));
   app.use("*", cors(cfg));
-  if (parseBodyLimitBytes(cfg.http.body_limit) > 0) {
-    app.use("*", bodyLimit(parseBodyLimitBytes(cfg.http.body_limit)));
+  const limitBytes = parseBodyLimitBytes(cfg.http.body_limit);
+  if (limitBytes > 0) {
+    app.use("*", bodyLimit(limitBytes));
   }
 
   app.onError((err, c) => {

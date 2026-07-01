@@ -10,7 +10,7 @@ export function recover(logger: Logger): MiddlewareHandler {
       logRecovered(c, logger, err);
       throw err;
     }
-    const ctxErr = (c as Context & { error?: unknown }).error;
+    const ctxErr = c.error;
     if (ctxErr !== undefined) {
       logRecovered(c, logger, ctxErr);
       throw ctxErr;
