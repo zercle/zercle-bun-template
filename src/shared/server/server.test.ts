@@ -112,7 +112,7 @@ describe("buildApp", () => {
     expect(res.status).toBe(404);
   });
 
-  it("maps a thrown error to 500 INTERNAL via onError", async () => {
+  it("maps a thrown error to 500 INTERNAL", async () => {
     const { app } = await makeApp();
     app.get("/boom", () => {
       throw new Error("x");

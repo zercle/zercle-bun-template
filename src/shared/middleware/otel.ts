@@ -16,7 +16,14 @@ export function otel(): MiddlewareHandler {
         span.setStatus({ code: SpanStatusCode.ERROR });
         throw err;
       } finally {
-        span.setAttribute("http.response.status_code", c.res?.status ?? 500);
+        const status = c.res?.status ?? 500;
+        span.setAttribute("http.response.status_code", status);
+        if (c.error) {
+          span.recordException(c.error);
+        }
+        if (status >= 500) {
+          span.setStatus({ code: SpanStatusCode.ERROR });
+        }
         span.end();
       }
     });

@@ -1,5 +1,6 @@
 import type { Context, MiddlewareHandler } from "hono";
 import type { Logger } from "pino";
+import { httpError } from "../errors/mapper.ts";
 import { getRequestId } from "./context.ts";
 
 export function recover(logger: Logger): MiddlewareHandler {
@@ -8,12 +9,15 @@ export function recover(logger: Logger): MiddlewareHandler {
       await next();
     } catch (err) {
       logRecovered(c, logger, err);
-      throw err;
+      const { status, body } = httpError(err);
+      return c.json(body, status as 200);
     }
     const ctxErr = c.error;
     if (ctxErr !== undefined) {
       logRecovered(c, logger, ctxErr);
-      throw ctxErr;
+      const { status, body } = httpError(ctxErr);
+      c.error = undefined;
+      return c.json(body, status as 200);
     }
   };
 }

@@ -111,7 +111,7 @@ describe("requestId middleware", () => {
 });
 
 describe("recover middleware", () => {
-  it("logs the panic and delegates to onError, which maps to 500 INTERNAL", async () => {
+  it("logs the panic and returns a 500 INTERNAL response", async () => {
     const logger = pino({ level: "silent" });
     const errorSpy = vi.spyOn(logger, "error");
     const app = new Hono();
@@ -163,6 +163,25 @@ describe("accessLog middleware", () => {
     expect(ctx.status).toBe(200);
     expect(typeof ctx.latency_ms).toBe("number");
     expect(args[1]).toBe("http request");
+  });
+
+  it("logs the status code of a failed request when wrapped outside recover", async () => {
+    const logger = pino({ level: "silent" });
+    const infoSpy = vi.spyOn(logger, "info");
+    const app = new Hono();
+    app.use("*", accessLog(logger));
+    app.use("*", recover(logger));
+    app.get("/boom", () => {
+      throw new Error("x");
+    });
+
+    const res = await app.request("/boom");
+    expect(res.status).toBe(500);
+
+    expect(infoSpy).toHaveBeenCalledTimes(1);
+    const args = infoSpy.mock.calls[0] ?? [];
+    const ctx = (args[0] ?? {}) as Record<string, unknown>;
+    expect(ctx.status).toBe(500);
   });
 });
 

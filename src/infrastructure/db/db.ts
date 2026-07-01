@@ -20,6 +20,7 @@ export async function createDB(cfg: Config): Promise<DBHandle> {
     max: cfg.db.max_conns,
     idle_timeout: cfg.db.max_conn_idle,
     connect_timeout: cfg.db.connect_timeout,
+    max_lifetime: cfg.db.max_conn_life,
     ssl:
       cfg.db.ssl_mode === "disable"
         ? false
