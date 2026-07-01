@@ -1,32 +1,27 @@
-import { loadConfig } from "./infrastructure/config/config.js";
-import { App } from "./app.js";
-import "dotenv/config";
+/**
+ * Composition root entry point. Mirrors Go `cmd/server/main.go`.
+ *
+ * Build metadata (overridable at build time via env or bundler defines):
+ *   APP_VERSION   - semver/tag (default "dev")
+ *   APP_COMMIT_SHA - git SHA (default "unknown")
+ *   APP_BUILD_TIME - RFC3339 timestamp (default "unknown")
+ */
+import { run } from "./app/app.ts";
 
-async function main() {
-  try {
-    // Load configuration
-    const config = loadConfig();
+const VERSION = process.env.APP_VERSION ?? "dev";
+const COMMIT_SHA = process.env.APP_COMMIT_SHA ?? "unknown";
+const BUILD_TIME = process.env.APP_BUILD_TIME ?? "unknown";
 
-    // Create and start application
-    const app = new App(config);
-    await app.start();
+console.log(
+  JSON.stringify({
+    msg: "starting",
+    version: VERSION,
+    commit: COMMIT_SHA,
+    build_time: BUILD_TIME,
+  }),
+);
 
-    // Handle graceful shutdown
-    process.on("SIGTERM", async () => {
-      console.log("SIGTERM signal received");
-      await app.stop();
-      process.exit(0);
-    });
-
-    process.on("SIGINT", async () => {
-      console.log("SIGINT signal received");
-      await app.stop();
-      process.exit(0);
-    });
-  } catch (error) {
-    console.error("Failed to start application:", error);
-    process.exit(1);
-  }
-}
-
-main();
+run().catch((err: unknown) => {
+  console.error("server stopped with error:", err);
+  process.exit(1);
+});

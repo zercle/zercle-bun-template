@@ -1,678 +1,226 @@
-# Zercle Bun Template
+# zercle-bun-template
 
-<div align="center">
-
-![Bun](https://img.shields.io/badge/Bun-1.0.0-black?style=for-the-badge&logo=bun)
-![Hono](https://img.shields.io/badge/Hono-4.6.0-red?style=for-the-badge)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript)
-![Drizzle ORM](https://img.shields.io/badge/Drizzle%20ORM-0.36.0-purple?style=for-the-badge)
-![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)
-
-A production-ready RESTful API template built with **Bun runtime** and **Hono framework**. This template implements domain-driven design (DDD) architecture with clean separation of concerns, making it ideal for building scalable, maintainable backend services.
-
-[Features](#features) • [Tech Stack](#tech-stack) • [Project Structure](#project-structure) • [Quick Start](#quick-start) • [Documentation](#documentation)
-
-</div>
-
----
+A Bun + Hono + TypeScript backend service template with a layered, DI-container-based architecture, Postgres (Drizzle ORM), Valkey (Redis-compatible) caching, OpenTelemetry traces, Prometheus metrics, and a Docker Compose stack including an optional observability profile.
 
 ## Features
 
-- 🚀 **High Performance**: Built on Bun, the fastest JavaScript runtime
-- 🎯 **Domain-Driven Design**: Clean architecture with separated domains, infrastructure, and utilities
-- 🔐 **Secure Authentication**: JWT-based auth with Argon2id password hashing
-- 📊 **Database Integration**: Drizzle ORM with PostgreSQL and type-safe migrations
-- 🛡️ **Security Middleware**: CORS, rate limiting, request ID tracking, and JWT verification
-- 📝 **TypeScript**: Full type safety with strict mode enabled
-- 🐳 **Docker Ready**: Production-ready Docker configuration with docker-compose
-- 📊 **Structured Logging**: Pino-based logging with configurable formats
-- ✅ **API Response Format**: Consistent JSend-style response structure
-- 🔧 **Configuration Management**: YAML-based config with environment variable overrides
-
-## Tech Stack
-
-| Category       | Technology                                                                                      |
-| -------------- | ----------------------------------------------------------------------------------------------- |
-| Runtime        | [Bun](https://bun.sh/) v1.0.0+                                                                  |
-| Framework      | [Hono](https://hono.dev/) v4.6.0                                                                |
-| Language       | [TypeScript](https://www.typescriptlang.org/) v5.7                                              |
-| Database       | [PostgreSQL](https://www.postgresql.org/) with [Drizzle ORM](https://orm.drizzle.team/) v0.36.0 |
-| Authentication | [JWT](https://jwt.io/) + [Argon2id](https://github.com/ranisalt/node-argon2)                    |
-| Validation     | [Zod](https://zod.dev/) v3.24                                                                   |
-| Logging        | [Pino](https://getpino.io/) v9.6                                                                |
-| Configuration  | [js-yaml](https://github.com/nodeca/js-yaml) v4.1                                               |
-| Docker         | [Docker](https://www.docker.com/) + [docker-compose](https://docs.docker.com/compose/)          |
-
-## Project Structure
-
-```
-zercle-bun-template/
-├── .env.example              # Environment variables template
-├── .gitignore                # Git ignore rules
-├── drizzle.config.ts         # Drizzle ORM configuration
-├── package.json              # Project dependencies and scripts
-├── tsconfig.json             # TypeScript configuration
-├── LICENSE.md                # License file
-│
-├── configs/                  # Configuration files by environment
-│   ├── dev.yaml             # Development configuration
-│   ├── local.yaml           # Local development configuration
-│   ├── prod.yaml            # Production configuration
-│   └── uat.yaml             # User acceptance testing configuration
-│
-├── deployments/              # Deployment configurations
-│   └── docker/
-│       ├── Dockerfile       # Multi-stage Docker build
-│       └── docker-compose.yml # Docker Compose for local development
-│
-├── drizzle/                  # Database migrations
-│   └── migrations/          # Generated migration files
-│       └── *_initial_schema.sql
-│
-├── scripts/                  # Utility scripts
-│
-└── src/                      # Source code
-    ├── main.ts              # Application entry point
-    ├── app.ts               # App initialization and route setup
-    │
-    ├── domain/              # Business logic (DDD)
-    │   ├── task/            # Task domain
-    │   │   ├── entity/      # Domain entities (Task model)
-    │   │   ├── handler/     # HTTP handlers/controllers
-    │   │   ├── repository/  # Data access layer
-    │   │   ├── request/     # Request validation schemas
-    │   │   ├── response/    # Response types
-    │   │   └── usecase/     # Business logic use cases
-    │   │
-    │   └── user/            # User domain
-    │       ├── entity/      # Domain entities (User model)
-    │       ├── handler/     # HTTP handlers/controllers
-    │       ├── repository/  # Data access layer
-    │       ├── request/     # Request validation schemas
-    │       ├── response/    # Response types
-    │       └── usecase/     # Business logic use cases
-    │
-    ├── infrastructure/      # Infrastructure layer
-    │   ├── config/          # Configuration loading and validation
-    │   ├── db/              # Database connection and setup
-    │   ├── logger/          # Logging service
-    │   ├── middleware/      # HTTP middleware
-    │   │   ├── auth.ts      # JWT authentication
-    │   │   ├── cors.ts      # CORS handling
-    │   │   ├── logger.ts    # Request/response logging
-    │   │   ├── rate-limit.ts # Rate limiting
-    │   │   └── request-id.ts # Request ID generation
-    │   └── password/        # Password hashing (Argon2id)
-    │
-    └── utils/               # Utility functions
-        └── response.ts      # JSend-formatted response helpers
-```
-
-### Architecture Overview
-
-This template follows **Domain-Driven Design (DDD)** principles with a clear separation of layers:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Presentation Layer                      │
-│                   (Handlers / Controllers)                   │
-├─────────────────────────────────────────────────────────────┤
-│                      Application Layer                       │
-│                      (Use Cases)                             │
-├─────────────────────────────────────────────────────────────┤
-│                      Domain Layer                            │
-│                   (Entities / Business Logic)                │
-├─────────────────────────────────────────────────────────────┤
-│                     Infrastructure Layer                     │
-│              (DB, Auth, Config, Middleware)                  │
-└─────────────────────────────────────────────────────────────┘
-```
+- Bun runtime, Hono 4 HTTP framework
+- Layered architecture wired through a symbol-keyed DI container (`src/app/container.ts`)
+- Composition root in `src/main.ts` -> `src/app/app.ts`, with SIGTERM/SIGINT graceful shutdown
+- Postgres via `pg` and Drizzle ORM 0.45 (`drizzle-kit` migrations)
+- Valkey (Redis-compatible) via `ioredis`
+- Zod 4 request/response validation
+- Pino structured logging (JSON or pretty)
+- OpenTelemetry SDK with OTLP HTTP trace exporter and HTTP instrumentation
+- Prometheus metrics via `prom-client`
+- Liveness and readiness probes backed by a pluggable health registry
+- Vitest 4 with `unit`, `integration`, and `e2e` projects, v8 coverage
+- Biome 2 for lint and format
+- Containerfile + multi-service `compose.yml` with an `observability` profile (OTel Collector, Prometheus, Grafana)
+- Type-safe RPC client via `hono/client` and the exported `AppType`
 
 ## Prerequisites
 
-Before using this template, ensure you have the following installed:
+- Bun >= 1.3.0 (the project pins `bun@1.3.2` via `packageManager`)
+- Docker and Docker Compose (optional; only needed for Postgres/Valkey via containers or the observability stack)
 
-- **Bun** v1.0.0 or higher - [Install](https://bun.sh/docs/installation)
-- **Node.js** v18 or higher (for some tooling)
-- **PostgreSQL** v15+ (or use Docker)
-- **Git** for version control
-
-## Quick Start
-
-### 1. Clone and Install Dependencies
+## Quick start
 
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd zercle-bun-template
-
-# Install dependencies
-bun install
-```
-
-### 2. Configure Environment
-
-```bash
-# Copy environment template
+# 1. Copy environment defaults
 cp .env.example .env
 
-# Edit environment variables
-nano .env
-```
+# 2. Install dependencies
+bun install
 
-### 3. Set Up Database
+# 3. Start Postgres and Valkey via Compose
+docker compose up -d postgres valkey
 
-**Option A: Using Docker Compose (Recommended)**
+# 4. Apply database migrations
+bun run migrate:up
 
-```bash
-# Start PostgreSQL container
-docker-compose -f deployments/docker/docker-compose.yml up -d postgres
-
-# Run database migrations
-bun run db:migrate
-```
-
-**Option B: Local PostgreSQL**
-
-Ensure PostgreSQL is running locally, then:
-
-```bash
-# Run migrations
-bun run db:migrate
-```
-
-### 4. Start Development Server
-
-```bash
-# Start with hot reload
+# 5. Start the server in watch mode
 bun run dev
 ```
 
-The server will start at `http://localhost:3000`.
+The server listens on `http://0.0.0.0:8080` by default (configured under `http.host` / `http.port` in `config.yaml`, overridable with `HTTP_HOST` / `HTTP_PORT`).
+
+## Project structure
+
+```
+src/
+  main.ts                Composition root entry point
+  index.ts               Public type surface (exports AppType)
+  app/                   Application wiring (container, build, run)
+  config/                YAML + env-var configuration loader
+  features/              Feature slices (domain, service, repository, handler, dto, di)
+    example/             STUB feature demonstrating the pattern; delete to start
+  infrastructure/        External service adapters (db, valkey)
+  shared/                Cross-cutting layers
+    server/              Hono app + Application lifecycle
+    middleware/          requestId, recover, otel, accessLog, cors, bodyLimit
+    telemetry/           logger, tracer, meter, health registry
+    errors/              AppError, sentinels, HTTP error mapper
+  migrate.ts             Migration CLI (up / down / status)
+```
+
+The middleware stack is registered in this fixed order in `src/shared/server/http.ts`:
+
+1. `requestId`
+2. `recover`
+3. `otel`
+4. `accessLog`
+5. `cors`
+6. `bodyLimit` (only when `http.body_limit` parses to a positive size)
 
 ## Configuration
 
-### Environment Variables
+Two equivalent sources are merged at startup, with environment variables taking precedence over YAML:
 
-Configure your application using environment variables or `.env` file:
+- `config.yaml` — default values, organised into sections: `app`, `http`, `db`, `valkey`, `log`, `otel`, `example`.
+- `.env.example` — environment variable names accepted as overrides (`APP_*`, `HTTP_*`, `DB_*`, `VALKEY_*`, `LOG_*`, `OTEL_*`, `EXAMPLE_*`). Copy this file to `.env` and edit as needed.
 
-```env
-# Server Configuration
-SERVER_ENV=local
-SERVER_PORT=3000
-SERVER_HOST=0.0.0.0
+Durations accept Go-style values such as `15s`, `30m`, `1h`. `http.body_limit` accepts size suffixes such as `1M`.
 
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=postgres
-DB_DRIVER=postgres
+## HTTP API
 
-# JWT Configuration
-JWT_SECRET=your-secret-key-change-in-production
-JWT_EXPIRATION=3600
+### Observability (mounted on the root app)
 
-# Logging Configuration
-LOG_LEVEL=info
-LOG_FORMAT=json
+| Method | Path       | Description                                          | Success | Failure |
+| ------ | ---------- | ---------------------------------------------------- | ------- | ------- |
+| GET    | `/healthz` | Liveness probe                                       | 200     | 500     |
+| GET    | `/readyz`  | Readiness probe; runs the health registry            | 200     | 503     |
+| GET    | `/metrics` | Prometheus metrics scrape endpoint                   | 200     | -       |
 
-# CORS Configuration
-# CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
+### Example stub feature (mounted at `/api/v1`)
 
-# Rate Limiting Configuration
-RATE_LIMIT_REQUESTS=100
-RATE_LIMIT_WINDOW=60
+The `src/features/example` slice is a deliberately minimal CRUD stub that demonstrates the feature pattern (domain, service, repository, handler, DTO, DI). **Delete `src/features/example` to start a real project.**
 
-# Argon2id Configuration
-ARGON2ID_MEMORY=19456
-ARGON2ID_ITERATIONS=2
-ARGON2ID_PARALLELISM=1
+| Method | Path                   | Description                                          | Success |
+| ------ | ---------------------- | ---------------------------------------------------- | ------- |
+| POST   | `/api/v1/items`        | Create an item; body `{ "name": string }`            | 201     |
+| GET    | `/api/v1/items`        | List items; query `limit`, `offset`                  | 200     |
+| GET    | `/api/v1/items/:id`    | Fetch an item by UUID                                | 200     |
+
+## Type-safe client
+
+`src/index.ts` exports the `AppType` of the Hono app with the `/api/v1` routes mounted. Use it with `hono/client` for a fully typed RPC client. Health and metrics routes are mounted directly on the runtime app and are not part of `AppType`; reach them with plain `fetch`.
+
+```ts
+import { hc } from "hono/client";
+import type { AppType } from "zercle-bun-template";
+
+const client = hc<AppType>("http://localhost:8080");
+
+const res = await client.api.v1.items.$post({ json: { name: "x" } });
+const list = await client.api.v1.items.$get({ query: { limit: 10, offset: 0 } });
 ```
 
-### YAML Configuration Files
+## Scripts
 
-The application uses YAML configuration files per environment:
+All scripts are defined in `package.json` and run via `bun run <name>` (or `npm run <name>`).
 
-| File                 | Environment | Description                |
-| -------------------- | ----------- | -------------------------- |
-| `configs/local.yaml` | Local       | Local development settings |
-| `configs/dev.yaml`   | Development | Development environment    |
-| `configs/uat.yaml`   | UAT         | User acceptance testing    |
-| `configs/prod.yaml`  | Production  | Production settings        |
+| Script               | Command                                                  | Purpose                                                  |
+| -------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
+| `dev`                | `bun run --watch src/main.ts`                            | Start the server with file watching                      |
+| `start`              | `bun run src/main.ts`                                    | Start the server without watching                        |
+| `typecheck`          | `tsc --noEmit`                                           | Type-check the project                                   |
+| `lint`               | `biome check src test`                                   | Run Biome checks                                         |
+| `lint:fix`           | `biome check --write src test`                           | Apply Biome auto-fixes                                   |
+| `format`             | `biome format --write src test`                          | Format with Biome                                        |
+| `test`               | `vitest run --project unit`                              | Run the unit test project                                |
+| `test:unit`          | `vitest run --project unit`                              | Unit tests only                                          |
+| `test:integration`   | `vitest run --project integration`                      | Integration tests (`*.integration.test.ts`)              |
+| `test:e2e`           | `vitest run --project e2e`                              | End-to-end tests (`test/e2e/**`)                         |
+| `test:coverage`      | `vitest run --project unit --coverage`                   | Unit tests with v8 coverage                              |
+| `migrate:generate`   | `drizzle-kit generate`                                   | Generate a new SQL migration from the Drizzle schema     |
+| `migrate:up`         | `bun run src/migrate.ts up`                              | Apply pending migrations                                 |
+| `migrate:down`       | `bun run src/migrate.ts down`                            | Declared but not implemented by the runner (exits with usage error) |
+| `migrate:status`     | `bun run src/migrate.ts status`                          | Show migration status                                    |
+| `docker:build`       | `docker build -f Containerfile -t zercle-bun-template:latest .` | Build the server container image                  |
 
-To change the active environment, set `SERVER_ENV`:
+## Database migrations
+
+Schema is managed with Drizzle. The configuration lives in `drizzle.config.ts`; generated SQL is written to `migrations/`.
 
 ```bash
-SERVER_ENV=dev bun run dev
+# After editing src/infrastructure/db/schema.ts
+bun run migrate:generate
+
+# Apply pending migrations
+bun run migrate:up
+
+# Inspect applied vs pending migrations
+bun run migrate:status
 ```
 
-## Database Setup
+Only `up` and `status` are implemented by `src/migrate.ts`. The `down` subcommand is declared in `package.json` but not implemented — rollback is not currently supported.
 
-### Database Migrations
-
-```bash
-# Generate a new migration (after schema changes)
-bun run db:generate
-
-# Push schema changes (development only)
-bun run db:push
-
-# Run all migrations
-bun run db:migrate
-
-# Open Drizzle Studio (database GUI)
-bun run db:studio
-```
-
-### Database Schema
-
-The database schema is defined in [`src/infrastructure/db/drizzle.ts`](src/infrastructure/db/drizzle.ts). After making changes:
-
-1. Update the schema file
-2. Run `bun run db:generate` to create a new migration
-3. Review the generated SQL in `drizzle/migrations/`
-4. Run `bun run db:migrate` to apply
-
-## Running the Application
-
-### Development Mode
-
-```bash
-# Start with hot reload
-bun run dev
-```
-
-### Production Mode
-
-```bash
-# Build the application
-bun run build
-
-# Start production server
-bun run start
-```
-
-### Running Tests
-
-```bash
-# Run all tests
-bun run test
-
-# Run tests with coverage
-bun run test:coverage
-```
-
-### Linting and Formatting
-
-```bash
-# Check code style
-bun run lint
-bun run format:check
-
-# Auto-fix issues
-bun run lint:fix
-bun run format
-```
-
-## API Documentation
-
-### Base URL
-
-```
-http://localhost:3000
-```
-
-### Health Check Endpoints
-
-| Method | Endpoint     | Description                            |
-| ------ | ------------ | -------------------------------------- |
-| GET    | `/health`    | Application health check               |
-| GET    | `/readiness` | Readiness probe (checks DB connection) |
-
-### Authentication Endpoints
-
-| Method | Endpoint                | Auth | Description             |
-| ------ | ----------------------- | ---- | ----------------------- |
-| POST   | `/api/v1/auth/register` | ❌   | Register a new user     |
-| POST   | `/api/v1/auth/login`    | ❌   | Login and get JWT token |
-
-### User Endpoints
-
-| Method | Endpoint                | Auth | Description                |
-| ------ | ----------------------- | ---- | -------------------------- |
-| GET    | `/api/v1/users/profile` | ✅   | Get current user profile   |
-| PUT    | `/api/v1/users/profile` | ✅   | Update user profile        |
-| DELETE | `/api/v1/users/profile` | ✅   | Delete user account        |
-| GET    | `/api/v1/users`         | ✅   | List all users (paginated) |
-
-### Task Endpoints
-
-| Method | Endpoint            | Auth | Description                |
-| ------ | ------------------- | ---- | -------------------------- |
-| POST   | `/api/v1/tasks`     | ✅   | Create a new task          |
-| GET    | `/api/v1/tasks`     | ✅   | List all tasks (paginated) |
-| GET    | `/api/v1/tasks/:id` | ✅   | Get task by ID             |
-| PUT    | `/api/v1/tasks/:id` | ✅   | Update a task              |
-| DELETE | `/api/v1/tasks/:id` | ✅   | Delete a task              |
-
-### Request/Response Examples
-
-**Register User**
-
-```http
-POST /api/v1/auth/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "securePassword123",
-  "fullName": "John Doe",
-  "phone": "+1234567890"
-}
-```
-
-**Response (201 Created)**
-
-```json
-{
-  "status": "success",
-  "data": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "fullName": "John Doe",
-    "isActive": true,
-    "createdAt": "2024-01-01T00:00:00.000Z"
-  }
-}
-```
-
-**Login**
-
-```http
-POST /api/v1/auth/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "securePassword123"
-}
-```
-
-**Response (200 OK)**
-
-```json
-{
-  "status": "success",
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIs...",
-    "expiresIn": 3600
-  }
-}
-```
-
-### Error Response Format
-
-All errors follow the JSend specification:
-
-```json
-{
-  "status": "fail",
-  "message": "User not found",
-  "data": {
-    "field": ["error message"]
-  }
-}
-```
-
-## Docker Deployment
-
-### Building the Image
-
-```bash
-# Build the Docker image
-docker build -f deployments/docker/Dockerfile -t zercle-bun-app .
-```
-
-### Running with Docker Compose
-
-```bash
-# Start all services (app + database)
-docker-compose -f deployments/docker/docker-compose.yml up -d
-
-# View logs
-docker-compose -f deployments/docker/docker-compose.yml logs -f
-
-# Stop services
-docker-compose -f deployments/docker/docker-compose.yml down
-```
-
-### Production Deployment
-
-```bash
-# Set production environment variables
-export JWT_SECRET="your-production-secret"
-export SERVER_ENV=prod
-
-# Build and run
-docker-compose -f deployments/docker/docker-compose.yml up -d --build
-```
-
-### Health Checks
-
-The Docker configuration includes health checks for both the application and database:
-
-- **Application Health**: `curl -f http://localhost:3000/health`
-- **Database Health**: `pg_isready -U postgres`
-
-## Development Guidelines
-
-### Adding a New Domain
-
-To add a new domain (e.g., `order`):
-
-1. **Create the domain structure:**
-
-```bash
-mkdir -p src/domain/order/{entity,handler,repository,request,response,usecase}
-```
-
-2. **Define the entity:**
-
-```typescript
-// src/domain/order/entity/order.ts
-export interface Order {
-  id: string;
-  userId: string;
-  status: OrderStatus;
-  totalAmount: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateOrder {
-  userId: string;
-  items: OrderItem[];
-}
-```
-
-3. **Create the repository:**
-
-```typescript
-// src/domain/order/repository/order.ts
-import { DrizzleDatabase } from "../../../infrastructure/db/drizzle.js";
-import { Logger } from "../../../infrastructure/logger/logger.js";
-import { Order } from "../entity/order.js";
-
-export class OrderRepository {
-  constructor(
-    private db: DrizzleDatabase,
-    private logger: Logger,
-  ) {}
-
-  async findById(id: string): Promise<Order | null> {
-    // Implementation
-  }
-
-  async create(order: Order): Promise<Order> {
-    // Implementation
-  }
-}
-```
-
-4. **Implement use cases:**
-
-```typescript
-// src/domain/order/usecase/order.ts
-export interface IOrderUseCase {
-  createOrder(data: CreateOrder): Promise<Order>;
-  getOrder(id: string): Promise<Order>;
-}
-
-export class OrderUseCase implements IOrderUseCase {
-  // Implementation
-}
-```
-
-5. **Create request validation:**
-
-```typescript
-// src/domain/order/request/order.ts
-import { z } from "zod";
-
-export const createOrderSchema = z.object({
-  userId: z.string().uuid(),
-  items: z.array(
-    z.object({
-      productId: z.string().uuid(),
-      quantity: z.number().positive(),
-    }),
-  ),
-});
-```
-
-6. **Create HTTP handler:**
-
-```typescript
-// src/domain/order/handler/order.ts
-import { Context } from "hono";
-import { IOrderUseCase } from "../usecase/order.js";
-import { success, created } from "../../../utils/response.js";
-
-export class OrderHandler {
-  constructor(private useCase: IOrderUseCase) {}
-
-  async createOrder(c: Context) {
-    const body = await c.req.json();
-    const validatedData = createOrderSchema.parse(body);
-    const order = await this.useCase.createOrder(validatedData);
-    return created(c, order);
-  }
-}
-```
-
-7. **Register routes in `app.ts`:**
-
-```typescript
-// In setupDependencies()
-const orderRepo = new OrderRepository(this.db, this.logger);
-const orderUseCase = new OrderUseCase(orderRepo, this.logger);
-const orderHandler = new OrderHandler(orderUseCase);
-
-// In registerOrderRoutes()
-private registerOrderRoutes(handler: OrderHandler) {
-  const protectedRoutes = this.hono.basePath('/api/v1');
-  protectedRoutes.use('/orders*', createAuthMiddleware(this.config.jwt));
-
-  protectedRoutes.post('/orders', (c) => handler.createOrder(c));
-  protectedRoutes.get('/orders/:id', (c) => handler.getOrder(c));
-}
-```
-
-### Code Style
-
-- Use **ES modules** (`import`/`export`)
-- Follow **strict TypeScript** mode
-- Use **Zod** for input validation
-- Return **JSend-formatted** responses
-- Use **async/await** for all async operations
-- Implement **proper error handling** with typed errors
-
-### Naming Conventions
-
-| Component           | Convention       | Example           |
-| ------------------- | ---------------- | ----------------- |
-| Files               | kebab-case       | `user-handler.ts` |
-| Classes             | PascalCase       | `UserRepository`  |
-| Interfaces          | PascalCase       | `IUserService`    |
-| Variables/Functions | camelCase        | `getUserById`     |
-| Constants           | UPPER_SNAKE_CASE | `MAX_REQUESTS`    |
-| Database Tables     | snake_case       | `user_accounts`   |
+The `migrate` service in `compose.yml` runs `migrate up` automatically (via the `Containerfile.migrate` entrypoint, which defaults to `up`) before the `server` service starts.
 
 ## Testing
 
-### Writing Tests
+Vitest is configured with three projects in `vitest.config.ts`:
 
-Create test files with `.test.ts` extension:
+- `unit` — `src/**/*.test.ts`, environment `node` (also the default for `bun run test`).
+- `integration` — `src/**/*.integration.test.ts`, environment `node`.
+- `e2e` — `test/e2e/**/*.test.ts`, environment `node`.
 
-```typescript
-// src/domain/user/usecase/user.test.ts
-import { describe, it, expect } from "bun:test";
-
-describe("User UseCase", () => {
-  it("should register a new user", async () => {
-    // Test implementation
-  });
-});
-```
-
-### Running Tests
+Coverage is provided by `@vitest/coverage-v8` with `text` and `lcov` reporters, scoped to `src/**/*.ts` (excluding `*.test.ts`, `*.integration.test.ts`, and `index.ts` barrels). Coverage thresholds are 60% for lines, functions, branches, and statements.
 
 ```bash
-# Run all tests
-bun test
-
-# Run with coverage report
-bun run test:coverage
-
-# Run specific test file
-bun test src/domain/user/usecase/user.test.ts
+bun run test                # unit tests only
+bun run test:integration
+bun run test:e2e
+bun run test:coverage       # unit tests + coverage
 ```
 
-## Contributing
+## Docker
 
-1. **Fork the repository**
-2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
-3. **Commit changes** (`git commit -m 'Add amazing feature'`)
-4. **Push to branch** (`git push origin feature/amazing-feature`)
-5. **Open a Pull Request**
+Build the server image:
 
-### Commit Message Format
-
+```bash
+bun run docker:build
 ```
-type(scope): description
 
-Types:
-- feat: New feature
-- fix: Bug fix
-- docs: Documentation changes
-- style: Code style changes
-- refactor: Code refactoring
-- test: Test additions
-- chore: Maintenance
+Or start the full stack (Postgres, Valkey, migrate, server):
 
-Example: feat(user): add password reset functionality
+```bash
+docker compose up -d
 ```
+
+The compose file declares these services:
+
+- `postgres` (`postgres:18-alpine`) — port `5432`, named volume `postgres_data`
+- `valkey` (`valkey:9-alpine`) — port `6379`, named volume `valkey_data`
+- `migrate` — built from `Containerfile.migrate`, waits for Postgres to be healthy
+- `server` — built from `Containerfile`, port `8080`, waits for Postgres and Valkey to be healthy and for `migrate` to complete successfully
+
+All services share the `zercle-template` bridge network.
+
+### Observability profile
+
+Bring up the OTel Collector, Prometheus, and Grafana alongside the core stack:
+
+```bash
+docker compose --profile observability up
+```
+
+This adds:
+
+- `otel-collector` (`otel/opentelemetry-collector-contrib:0.114.0`) — ports `4317` (OTLP gRPC), `4318` (OTLP HTTP), `8888`, `8889`
+- `prometheus` (`prom/prometheus:v3.0.1`) — port `9090`, named volume `prometheus_data`
+- `grafana` (`grafana/grafana:11.4.0`) — port `3000`, default credentials `admin` / `admin`, named volume `grafana_data`
+
+Prometheus and Grafana configuration files are mounted from `deployments/observability/`.
+
+## Observability
+
+- **Traces** — OpenTelemetry SDK with the OTLP HTTP exporter. Configure the endpoint via `OTEL_EXPORTER_OTLP_ENDPOINT` (default `http://localhost:4318`). Set `OTEL_EXPORTER=none` to disable export entirely.
+- **Metrics** — `prom-client` registry exposed at `GET /metrics`.
+- **Logs** — Pino structured logs. `LOG_LEVEL` (`debug` / `info` / `warn` / `error`) and `LOG_FORMAT` (`json` / `pretty`).
+- **Probes** — `GET /healthz` runs the liveness checks, `GET /readyz` runs the readiness checks; both are bounded by `HTTP_HEALTH_PROBE_TIMEOUT`.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-
----
-
-<div align="center">
-
-Built with ❤️ using [Bun](https://bun.sh/) and [Hono](https://hono.dev/)
-
-</div>
+See [LICENSE](LICENSE).
