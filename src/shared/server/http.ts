@@ -71,9 +71,9 @@ export function buildApp(container: Container): Hono {
   const app = new Hono();
 
   app.use("*", requestId());
+  app.use("*", otel());
   app.use("*", accessLog(logger));
   app.use("*", recover(logger));
-  app.use("*", otel());
   app.use("*", cors(cfg));
   const limitBytes = parseBodyLimitBytes(cfg.http.body_limit);
   if (limitBytes > 0) {
