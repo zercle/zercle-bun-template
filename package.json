@@ -35,7 +35,7 @@
     "@opentelemetry/sdk-trace-base": "2.8.0",
     "@opentelemetry/semantic-conventions": "1.41.1",
     "drizzle-orm": "0.45.2",
-    "hono": "4.12.26",
+    "hono": "4.12.28",
     "ioredis": "5.11.1",
     "pino": "10.3.1",
     "pino-pretty": "13.1.3",
