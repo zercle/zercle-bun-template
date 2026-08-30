@@ -1,16 +1,22 @@
 // STUB FEATURE — delete src/features/example to start your project.
+
+/**
+ * Feature composition: registers sentinels, builds the driven adapter
+ * (postgres repository), the application use case, and the driving HTTP
+ * adapter, then mounts the router on the platform Hono app.
+ */
 import type { Hono } from "hono";
 import type { Container } from "../../app/container.ts";
 import { type Config, ConfigKey } from "../../config/config.ts";
-import { type DBHandle, DBKey } from "../../infrastructure/db/index.ts";
-import { ErrInvalidInput, ErrNotFound } from "../../shared/errors/app-error.ts";
-import { registerSentinel } from "../../shared/errors/sentinel.ts";
-import { AppKey } from "../../shared/server/index.ts";
+import { type DBHandle, DBKey } from "../../platform/db/index.ts";
+import { ErrInvalidInput, ErrNotFound } from "../../platform/errors/app-error.ts";
+import { registerSentinel } from "../../platform/errors/sentinel.ts";
+import { AppKey } from "../../platform/server/index.ts";
+import { createExampleRouter } from "./adapter/in/http/handler.ts";
+import { DrizzleItemRepository } from "./adapter/out/postgres/repository.ts";
+import type { ItemService } from "./application/service.ts";
+import { ItemUsecase } from "./application/usecase.ts";
 import { ErrInvalidID, ErrInvalidName, ErrItemNotFound } from "./domain/errors.ts";
-import type { ItemService } from "./domain/service.ts";
-import { createExampleRouter } from "./handler/http.ts";
-import { DrizzleItemRepository } from "./repository/repository.ts";
-import { ItemServiceImpl } from "./service/service.ts";
 
 export const ExampleRouterKey = Symbol("ExampleRouter");
 
@@ -23,7 +29,7 @@ export function register(container: Container): void {
   const handle = container.resolve<DBHandle>(DBKey);
 
   const repo = new DrizzleItemRepository(handle.db);
-  const service: ItemService = new ItemServiceImpl(repo, {
+  const service: ItemService = new ItemUsecase(repo, {
     defaultPageSize: cfg.example.default_page_size,
     maxPageSize: cfg.example.max_page_size,
     maxNameLength: cfg.example.max_name_length,

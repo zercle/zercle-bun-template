@@ -26,6 +26,14 @@ RUN bun build --compile src/main.ts --outfile main
 # -----------------------------------------------------------------------------
 FROM gcr.io/distroless/base-debian13:nonroot AS final
 
+# Build metadata consumed by src/main.ts at startup (see CD workflow).
+ARG APP_VERSION=dev
+ARG APP_COMMIT_SHA=unknown
+ARG APP_BUILD_TIME=unknown
+ENV APP_VERSION=${APP_VERSION} \
+    APP_COMMIT_SHA=${APP_COMMIT_SHA} \
+    APP_BUILD_TIME=${APP_BUILD_TIME}
+
 WORKDIR /app
 
 COPY --from=builder --chown=nonroot:nonroot /app/main /app/main
