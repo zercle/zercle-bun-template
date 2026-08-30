@@ -252,6 +252,16 @@ Prometheus and Grafana configuration files are mounted from `deployments/observa
 - **Logs** — Pino structured logs. `LOG_LEVEL` (`debug` / `info` / `warn` / `error`) and `LOG_FORMAT` (`json` / `pretty`).
 - **Probes** — `GET /healthz` runs the liveness checks, `GET /readyz` runs the readiness checks; both are bounded by `HTTP_HEALTH_PROBE_TIMEOUT`.
 
+## CI/CD
+
+GitHub Actions workflows live in `.github/workflows/` (mirroring the Go template's setup):
+
+- **`ci.yml`** — on push/PR to `main`/`develop`: lint + typecheck, unit tests with coverage (60% thresholds enforced by vitest, report uploaded to Codecov and as an artifact), integration tests against service containers (Postgres + Valkey, migrations applied first), and a docker build of both images.
+- **`cd.yml`** — on a `v*` tag push: builds multi-arch (`amd64`/`arm64`) server and migrate images and pushes them to `ghcr.io` (`:latest`, `:tag`, and `git describe` versions). Build metadata (`APP_VERSION`, `APP_COMMIT_SHA`, `APP_BUILD_TIME`) is stamped via `Containerfile` build args and printed by the server at startup.
+- **`security.yml`** — weekly (Monday 06:00 UTC) or manual: Trivy filesystem scan uploaded to the GitHub Security tab, plus `bun audit --audit-level=low` against the committed lockfile.
+
+Known-vulnerable transitive versions are pinned to patched releases via the `overrides` field in `package.json`; `dependabot.yml` keeps GitHub Actions, npm packages, and docker images current.
+
 ## License
 
 See [LICENSE](LICENSE).
