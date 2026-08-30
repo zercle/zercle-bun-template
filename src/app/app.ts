@@ -4,23 +4,23 @@
  *
  *   1. config  (load + register `Config`)
  *   2. telemetry (logger, tracer, meter, health registry)
- *   3. infrastructure (db, valkey — async, requires live services)
+ *   3. platform resources (db, valkey — async, requires live services)
  *   4. server (Hono app + Application)
- *   5. features (added in Wave 6)
+ *   5. features (example)
  *
  * `build()` connects to real services. Tests should build a Hono app directly
  * via `buildApp(container)` against a hand-populated container — see
- * `src/shared/server/server.test.ts`.
+ * `src/platform/server/server.test.ts`.
  */
 import type pino from "pino";
 import { ConfigKey, loadConfig } from "../config/config.ts";
 import * as example from "../features/example/di.ts";
-import * as db from "../infrastructure/db/register.ts";
-import * as valkey from "../infrastructure/messaging/valkey.ts";
-import { type Application, ApplicationKey } from "../shared/server/index.ts";
-import * as server from "../shared/server/register.ts";
-import { LoggerKey } from "../shared/telemetry/index.ts";
-import * as telemetry from "../shared/telemetry/register.ts";
+import * as db from "../platform/db/register.ts";
+import * as valkey from "../platform/messaging/valkey.ts";
+import { type Application, ApplicationKey } from "../platform/server/index.ts";
+import * as server from "../platform/server/register.ts";
+import { LoggerKey } from "../platform/telemetry/index.ts";
+import * as telemetry from "../platform/telemetry/register.ts";
 import { Container } from "./container.ts";
 
 /**

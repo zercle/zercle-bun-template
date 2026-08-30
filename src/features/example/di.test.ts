@@ -8,8 +8,8 @@ import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../../app/container.ts";
 import { type Config, ConfigKey } from "../../config/config.ts";
-import { type DBHandle, DBKey } from "../../infrastructure/db/index.ts";
-import { AppKey } from "../../shared/server/index.ts";
+import { type DBHandle, DBKey } from "../../platform/db/index.ts";
+import { AppKey } from "../../platform/server/index.ts";
 
 const { sqlFn, fakeSql } = vi.hoisted(() => {
   const sqlFn = vi.fn(() => Promise.resolve([]));
@@ -17,25 +17,25 @@ const { sqlFn, fakeSql } = vi.hoisted(() => {
   return { sqlFn, fakeSql };
 });
 
-vi.mock("../../infrastructure/db/db.ts", () => ({
+vi.mock("../../platform/db/db.ts", () => ({
   createDB: vi.fn(),
   DBKey: Symbol("DB"),
 }));
 
-vi.mock("../../infrastructure/db/register.ts", () => ({
+vi.mock("../../platform/db/register.ts", () => ({
   register: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../infrastructure/messaging/valkey.ts", () => ({
+vi.mock("../../platform/messaging/valkey.ts", () => ({
   register: vi.fn().mockResolvedValue(undefined),
   ValkeyKey: Symbol("Valkey"),
 }));
 
-vi.mock("../../shared/telemetry/register.ts", () => ({
+vi.mock("../../platform/telemetry/register.ts", () => ({
   register: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../shared/server/register.ts", () => ({
+vi.mock("../../platform/server/register.ts", () => ({
   register: vi.fn(),
   ApplicationKey: Symbol.for("Application"),
 }));
@@ -118,7 +118,7 @@ function makeContainer(): Container {
 describe("example.register", () => {
   it("mounts the example router under /api/v1 on the existing Hono app", async () => {
     const { register } = await import("./di.ts");
-    const { HealthRegistryKey } = await import("../../shared/telemetry/index.ts");
+    const { HealthRegistryKey } = await import("../../platform/telemetry/index.ts");
     const container = makeContainer();
     container.registerValue(HealthRegistryKey, { addReadiness: vi.fn() } as never);
 
@@ -131,8 +131,8 @@ describe("example.register", () => {
 
   it("registers sentinels mapping domain errors to AppError codes", async () => {
     const { register } = await import("./di.ts");
-    const { HealthRegistryKey } = await import("../../shared/telemetry/index.ts");
-    const { httpError } = await import("../../shared/errors/mapper.ts");
+    const { HealthRegistryKey } = await import("../../platform/telemetry/index.ts");
+    const { httpError } = await import("../../platform/errors/mapper.ts");
     const domain = await import("./domain/errors.ts");
     const container = makeContainer();
     container.registerValue(HealthRegistryKey, { addReadiness: vi.fn() } as never);

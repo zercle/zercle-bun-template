@@ -31,25 +31,25 @@ vi.mock("../config/config.ts", () => ({
   loadConfig: () => ({ app: { name: "t" } }),
 }));
 
-vi.mock("../shared/telemetry/register.ts", () => ({
+vi.mock("../platform/telemetry/register.ts", () => ({
   register: vi.fn(),
 }));
 
-vi.mock("../infrastructure/db/register.ts", () => ({
+vi.mock("../platform/db/register.ts", () => ({
   register: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../infrastructure/messaging/valkey.ts", () => ({
+vi.mock("../platform/messaging/valkey.ts", () => ({
   register: vi.fn().mockResolvedValue(undefined),
   ValkeyKey: Symbol("Valkey"),
 }));
 
-vi.mock("../shared/server/register.ts", () => ({
+vi.mock("../platform/server/register.ts", () => ({
   ApplicationKey: Symbol.for("Application"),
   register: vi.fn(),
 }));
 
-vi.mock("../shared/server/index.ts", () => ({
+vi.mock("../platform/server/index.ts", () => ({
   ApplicationKey: Symbol.for("Application"),
 }));
 
@@ -91,15 +91,15 @@ beforeEach(async () => {
   fakeApp.stop.mockReset().mockResolvedValue(undefined);
   fakeApp.start.mockClear();
 
-  const serverMod = await import("../shared/server/register.ts");
+  const serverMod = await import("../platform/server/register.ts");
   (serverMod.register as unknown as ReturnType<typeof vi.fn>).mockImplementation(
     (c: { registerValue: (k: symbol, v: unknown) => void }) => {
       c.registerValue(serverMod.ApplicationKey, fakeApp);
     },
   );
 
-  const telemetryMod = await import("../shared/telemetry/register.ts");
-  const { LoggerKey } = await import("../shared/telemetry/index.ts");
+  const telemetryMod = await import("../platform/telemetry/register.ts");
+  const { LoggerKey } = await import("../platform/telemetry/index.ts");
   (telemetryMod.register as unknown as ReturnType<typeof vi.fn>).mockImplementation(
     async (c: { registerValue: (k: symbol, v: unknown) => void }) => {
       c.registerValue(LoggerKey, fakeLogger);

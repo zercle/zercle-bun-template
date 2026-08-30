@@ -12,7 +12,7 @@
 import { describe, expect, it } from "vitest";
 import { build } from "../../src/app/app.ts";
 import { Container } from "../../src/app/container.ts";
-import type { Application } from "../../src/shared/server/index.ts";
+import type { Application } from "../../src/platform/server/index.ts";
 
 const HAS_DB = typeof process.env.DB_HOST === "string" && process.env.DB_HOST.length > 0;
 const HAS_VALKEY =

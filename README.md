@@ -1,11 +1,12 @@
 # zercle-bun-template
 
-A Bun + Hono + TypeScript backend service template with a layered, DI-container-based architecture, Postgres (Drizzle ORM), Valkey (Redis-compatible) caching, OpenTelemetry traces, Prometheus metrics, and a Docker Compose stack including an optional observability profile.
+A Bun + Hono + TypeScript backend service template with a clean (DDD) architecture, DI-container-based wiring, Postgres (Drizzle ORM), Valkey (Redis-compatible) caching, OpenTelemetry traces, Prometheus metrics, and a Docker Compose stack including an optional observability profile.
 
 ## Features
 
 - Bun runtime, Hono 4 HTTP framework
-- Layered architecture wired through a symbol-keyed DI container (`src/app/container.ts`)
+- Clean (DDD) architecture: feature slices over `contract` / `domain` / `port` / `application` / `adapter`, with the dependency rule enforced by an executable architecture test (`src/architecture.test.ts`)
+- Exposed inbound type contract: wire schemas and error codes re-exported from the package entry (`src/index.ts`) for downstream consumers
 - Composition root in `src/main.ts` -> `src/app/app.ts`, with SIGTERM/SIGINT graceful shutdown
 - Postgres via `pg` and Drizzle ORM 0.45 (`drizzle-kit` migrations)
 - Valkey (Redis-compatible) via `ioredis`
@@ -47,24 +48,49 @@ The server listens on `http://0.0.0.0:8080` by default (configured under `http.h
 
 ## Project structure
 
-```
+Clean architecture with dependencies pointing inward: `adapter/in` → `application` → `port` + `domain`; `adapter/out` satisfies ports; `platform` is feature-agnostic. The rules are executable — `src/architecture.test.ts` fails the unit suite on any violation.
+
+```text
 src/
   main.ts                Composition root entry point
-  index.ts               Public type surface (exports AppType)
+  index.ts               Published inbound contract facade (wire types, error codes, AppType)
+  architecture.test.ts   Executable dependency-rule gates
   app/                   Application wiring (container, build, run)
   config/                YAML + env-var configuration loader
-  features/              Feature slices (domain, service, repository, handler, dto, di)
+  features/              Feature slices
     example/             STUB feature demonstrating the pattern; delete to start
-  infrastructure/        External service adapters (db, valkey)
-  shared/                Cross-cutting layers
+      contract/          Inbound wire types (zod schemas) — the dependency-free leaf
+      domain/            Entities + domain logic + sentinel errors
+      port/              Outbound (driven) port interfaces
+      application/       Inbound port interface + use-case orchestration
+      adapter/
+        in/http/         Driving adapter: HTTP handler
+        out/postgres/    Driven adapter: Drizzle repository + table schema
+      di.ts              Feature composition (wires adapters to ports)
+  platform/              Cross-cutting, feature-agnostic infrastructure
     server/              Hono app + Application lifecycle
     middleware/          requestId, recover, otel, accessLog, cors, bodyLimit
     telemetry/           logger, tracer, meter, health registry
-    errors/              AppError, sentinels, HTTP error mapper
+    errors/              error codes, AppError, sentinels, HTTP error mapper
+    db/                  Connection-level Drizzle/postgres wiring (schema-free)
+    messaging/           Valkey (ioredis) wiring
   migrate.ts             Migration CLI (up / down / status)
 ```
 
-The middleware stack is registered in this fixed order in `src/shared/server/http.ts`:
+Dependency rules enforced by `src/architecture.test.ts` (mirroring the Go template's `internal/architecture_test.go`):
+
+1. `domain` depends on nothing
+2. `contract` is a dependency-free leaf (`zod` only) and is published outward only through `src/index.ts`
+3. `port` references only its own feature's `domain`
+4. `application` orchestrates its own feature's `domain`, `port`, and `contract`
+5. `adapter/out` never imports `application` or `adapter/in`
+6. `adapter/in` talks to the application port only — never to `port` or `adapter/out`
+7. `platform` never imports `features`
+8. internal code never imports the `src/index.ts` facade (outward-only)
+
+New features copy the same slice shape; add each feature's `adapter/out/postgres/schema.ts` to `drizzle.config.ts`.
+
+The middleware stack is registered in this fixed order in `src/platform/server/http.ts`:
 
 1. `requestId`
 2. `recover`
@@ -94,7 +120,7 @@ Durations accept Go-style values such as `15s`, `30m`, `1h`. `http.body_limit` a
 
 ### Example stub feature (mounted at `/api/v1`)
 
-The `src/features/example` slice is a deliberately minimal CRUD stub that demonstrates the feature pattern (domain, service, repository, handler, DTO, DI). **Delete `src/features/example` to start a real project.**
+The `src/features/example` slice is a deliberately minimal CRUD stub that demonstrates the clean-architecture pattern (contract, domain, port, application, adapter, di). **Delete `src/features/example` to start a real project.**
 
 | Method | Path                   | Description                                          | Success |
 | ------ | ---------------------- | ---------------------------------------------------- | ------- |
@@ -102,18 +128,23 @@ The `src/features/example` slice is a deliberately minimal CRUD stub that demons
 | GET    | `/api/v1/items`        | List items; query `limit`, `offset`                  | 200     |
 | GET    | `/api/v1/items/:id`    | Fetch an item by UUID                                | 200     |
 
-## Type-safe client
+## Type-safe client & published contract
 
-`src/index.ts` exports the `AppType` of the Hono app with the `/api/v1` routes mounted. Use it with `hono/client` for a fully typed RPC client. Health and metrics routes are mounted directly on the runtime app and are not part of `AppType`; reach them with plain `fetch`.
+`src/index.ts` is the published inbound contract facade (mirroring the Go template's `pkg/api/v1`): it re-exports the wire request/response schemas, the error codes carried in the `{"error", "message"}` envelope, and the `AppType` of the Hono app with the `/api/v1` routes mounted. Downstream services import from the package entry without touching server internals. Use `AppType` with `hono/client` for a fully typed RPC client. Health and metrics routes are mounted directly on the runtime app and are not part of `AppType`; reach them with plain `fetch`.
 
 ```ts
 import { hc } from "hono/client";
+import { ErrCodeNotFound, type ItemResponse, ListItemsResponse } from "zercle-bun-template";
 import type { AppType } from "zercle-bun-template";
 
 const client = hc<AppType>("http://localhost:8080");
 
 const res = await client.api.v1.items.$post({ json: { name: "x" } });
 const list = await client.api.v1.items.$get({ query: { limit: 10, offset: 0 } });
+const parsed = ListItemsResponse.safeParse(await list.json());
+if (res.status === 404) {
+  // body.error === ErrCodeNotFound
+}
 ```
 
 ## Scripts
@@ -144,7 +175,7 @@ All scripts are defined in `package.json` and run via `bun run <name>` (or `npm 
 Schema is managed with Drizzle. The configuration lives in `drizzle.config.ts`; generated SQL is written to `migrations/`.
 
 ```bash
-# After editing src/infrastructure/db/schema.ts
+# After editing src/features/example/adapter/out/postgres/schema.ts
 bun run migrate:generate
 
 # Apply pending migrations
