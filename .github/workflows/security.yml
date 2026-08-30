@@ -16,7 +16,7 @@ name: Weekly Security Scan
 
 on:
   schedule:
-    - cron: '0 6 * * 1'  # Monday 06:00 UTC
+    - cron: "0 6 * * 1" # Monday 06:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -34,16 +34,16 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          severity: 'LOW,MEDIUM,HIGH,CRITICAL'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          scan-type: "fs"
+          scan-ref: "."
+          severity: "LOW,MEDIUM,HIGH,CRITICAL"
+          format: "sarif"
+          output: "trivy-results.sarif"
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: 'trivy-results.sarif'
+          sarif_file: "trivy-results.sarif"
 
   # ==========================================================================
   # Job: Dependency Audit
