@@ -1,25 +1,34 @@
 /**
  * End-to-end smoke test for the server.
  *
- * Boots the full composition root (`build()` from `src/app/app.ts`) in-process
- * against real PostgreSQL + Valkey, then exercises the vending demo across the
- * three features: create a catalog product, register a machine with a coin
- * bank, restock it, then buy the product and check the change math and error
- * envelopes. Requires live deps; skips when `DB_HOST`/`VALKEY_HOST` are unset
- * so unit CI does not require docker services.
+ * The server is launched as a real subprocess (`bun run src/main.ts`) and driven
+ * over HTTP. Subprocess boot is required because Vitest runs this file under its
+ * Node runtime, where the `Bun` global does not exist; the in-process
+ * `Bun.serve` call in the composition root would throw `ReferenceError`. Spawning
+ * the binary exercises the real process boundary: config load, live PostgreSQL +
+ * Valkey wiring, migrations already applied by CI.
  *
- * CI runs `bun run migrate:up` before this project, so the feature tables
- * already exist.
+ * The child listens on 127.0.0.1:8091 so a developer's dev server on 8080 is
+ * never disturbed. The suite skips when `DB_HOST`/`VALKEY_HOST` are unset so unit
+ * CI does not need docker services.
  */
+import { type ChildProcess, spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { build } from "../../src/app/app.ts";
-import { Container } from "../../src/app/container.ts";
-import type { Application } from "../../src/platform/server/index.ts";
+
+const REPO_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const CHILD_HOST = "127.0.0.1";
+const CHILD_PORT = 8091;
+const CHILD_URL = `http://${CHILD_HOST}:${CHILD_PORT}`;
 
 const HAS_DB = typeof process.env.DB_HOST === "string" && process.env.DB_HOST.length > 0;
 const HAS_VALKEY =
   typeof process.env.VALKEY_HOST === "string" && process.env.VALKEY_HOST.length > 0;
 const LIVE = HAS_DB && HAS_VALKEY;
+
+const READY_TIMEOUT_MS = 15_000;
+const READY_INTERVAL_MS = 250;
+const KILL_GRACE_MS = 3_000;
 
 interface ProductResponse {
   id: string;
@@ -50,25 +59,78 @@ interface ErrorEnvelope {
 }
 
 describe.skipIf(!LIVE)("server e2e — vending demo", () => {
-  let application: Application | undefined;
-  let base: string;
+  const runSuffix = `${process.pid}-${Date.now()}`;
+  let child: ChildProcess | undefined;
+  let output = "";
+  let spawnError: Error | undefined;
   let productId: string;
   let machineId: string;
 
+  function outputTail(): string {
+    return output.length > 0 ? output.slice(-2_000) : "(no output captured)";
+  }
+
+  async function waitForHealthy(): Promise<void> {
+    const deadline = Date.now() + READY_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+      if (spawnError) {
+        throw new Error(`failed to spawn server: ${spawnError.message}`);
+      }
+      if (child && child.exitCode !== null) {
+        throw new Error(
+          `server exited with code ${child.exitCode} before becoming ready\n${outputTail()}`,
+        );
+      }
+      try {
+        const res = await fetch(`${CHILD_URL}/healthz`);
+        if (res.status === 200) return;
+      } catch {
+        // Server not accepting connections yet; retry until the deadline.
+      }
+      await new Promise((resolve) => setTimeout(resolve, READY_INTERVAL_MS));
+    }
+    throw new Error(`server did not become healthy within ${READY_TIMEOUT_MS}ms\n${outputTail()}`);
+  }
+
   beforeAll(async () => {
-    const container = new Container();
-    application = await build(container);
-    await application.start();
-    const addr = application.addr;
-    base = `http://${addr?.hostname ?? "127.0.0.1"}:${addr?.port ?? 0}`;
+    child = spawn("bun", ["run", "src/main.ts"], {
+      cwd: REPO_ROOT,
+      env: { ...process.env, HTTP_PORT: String(CHILD_PORT), HTTP_HOST: CHILD_HOST },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    child.stdout?.setEncoding("utf8");
+    child.stderr?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk: string) => {
+      output += chunk;
+    });
+    child.stderr?.on("data", (chunk: string) => {
+      output += chunk;
+    });
+    child.on("error", (err) => {
+      spawnError = err;
+    });
+
+    await waitForHealthy();
   });
 
   afterAll(async () => {
-    await application?.stop();
+    if (!child || child.exitCode !== null) return;
+    const proc = child;
+    await new Promise<void>((resolve) => {
+      const killTimer = setTimeout(() => {
+        proc.kill("SIGKILL");
+      }, KILL_GRACE_MS);
+      proc.once("exit", () => {
+        clearTimeout(killTimer);
+        resolve();
+      });
+      proc.kill("SIGTERM");
+    });
   });
 
   async function post(path: string, json: unknown): Promise<Response> {
-    return fetch(`${base}${path}`, {
+    return fetch(`${CHILD_URL}${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(json),
@@ -76,8 +138,9 @@ describe.skipIf(!LIVE)("server e2e — vending demo", () => {
   }
 
   it("creates a catalog product and reads it back", async () => {
+    const name = `e2e-cola-${runSuffix}`;
     const createRes = await post("/api/v1/products", {
-      name: "e2e-cola",
+      name,
       price_cents: 75,
       stock: 5,
     });
@@ -88,16 +151,16 @@ describe.skipIf(!LIVE)("server e2e — vending demo", () => {
     expect(created.stock).toBe(5);
     productId = created.id;
 
-    const getRes = await fetch(`${base}/api/v1/products/${created.id}`);
+    const getRes = await fetch(`${CHILD_URL}/api/v1/products/${created.id}`);
     expect(getRes.status).toBe(200);
     const fetched = (await getRes.json()) as ProductResponse;
     expect(fetched.id).toBe(created.id);
-    expect(fetched.name).toBe("e2e-cola");
+    expect(fetched.name).toBe(name);
   });
 
   it("registers a machine with an initial coin bank and restocks it", async () => {
     const createRes = await post("/api/v1/machines", {
-      label: "e2e-machine",
+      label: `e2e-machine-${runSuffix}`,
       initial_coins: [10],
     });
     expect(createRes.status).toBe(201);
