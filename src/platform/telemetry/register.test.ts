@@ -111,7 +111,6 @@ function makeCfg(overrides: Partial<Config["otel"]> = {}): Config {
       ...overrides,
     },
     log: { level: "error", format: "json" },
-    example: { enabled: false, default_page_size: 1, max_page_size: 1, max_name_length: 1 },
     catalog: { enabled: true, default_page_size: 20, max_page_size: 100, max_name_length: 255 },
     machines: { enabled: true, default_page_size: 20, max_page_size: 100, max_label_length: 255 },
     sales: { enabled: true },

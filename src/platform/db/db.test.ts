@@ -72,12 +72,6 @@ const fullCfg = {
     sampling: 1,
   },
   log: { level: "info" as const, format: "json" as const },
-  example: {
-    enabled: false,
-    default_page_size: 20,
-    max_page_size: 100,
-    max_name_length: 255,
-  },
   catalog: {
     enabled: true,
     default_page_size: 20,

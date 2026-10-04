@@ -12,7 +12,7 @@ RUN bun install --frozen-lockfile
 
 COPY tsconfig.json ./
 COPY src ./src
-COPY migrations ./migrations
+COPY src/features ./src/features
 COPY package.json tsconfig.json config.yaml ./
 
 RUN bun run typecheck
@@ -37,7 +37,7 @@ ENV APP_VERSION=${APP_VERSION} \
 WORKDIR /app
 
 COPY --from=builder --chown=nonroot:nonroot /app/main /app/main
-COPY --from=builder --chown=nonroot:nonroot /app/migrations ./migrations
+COPY --from=builder --chown=nonroot:nonroot /app/src/features ./src/features
 COPY --from=builder --chown=nonroot:nonroot /app/config.yaml /app/config.yaml
 
 USER nonroot:nonroot

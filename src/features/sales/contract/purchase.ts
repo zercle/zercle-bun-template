@@ -10,8 +10,8 @@
 import { z } from "zod";
 
 /**
- * Hyphenated UUID shape, mirroring Go's `validate:"uuid"` (and the example
- * feature's `UUID_RE`). Deliberately looser than zod's `z.uuid()`, which also
+ * Hyphenated UUID shape, mirroring Go's `validate:"uuid"` (and the shared
+ * `UUID_RE` used by the feature handlers). Deliberately looser than zod's `z.uuid()`, which also
  * enforces RFC 4122 variant bits and would reject ids the Go contract accepts.
  */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

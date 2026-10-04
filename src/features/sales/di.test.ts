@@ -93,12 +93,6 @@ function makeCfg(salesEnabled: boolean): Config {
     valkey: { host: "x", port: 1, password: "", db: 0, connect_timeout: 1, ttl: 30 },
     otel: { exporter: "none", endpoint: "", service_name: "t", sampling: 1 },
     log: { level: "error", format: "json" },
-    example: {
-      enabled: true,
-      default_page_size: 20,
-      max_page_size: 50,
-      max_name_length: 100,
-    },
     catalog: {
       enabled: true,
       default_page_size: 20,

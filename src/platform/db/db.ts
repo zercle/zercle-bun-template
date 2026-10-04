@@ -4,7 +4,7 @@ import { type Config, dbConnString } from "../../config/config";
 
 /**
  * Schema-agnostic Drizzle handle. Table definitions are owned by each
- * feature's driven adapter (e.g. `features/example/adapter/out/postgres`);
+ * feature's driven adapter (e.g. `features/catalog/adapter/out/postgres`);
  * the platform only owns the connection. Query typing comes from the table
  * passed to `select()`/`insert()`, not from a central schema registry.
  */

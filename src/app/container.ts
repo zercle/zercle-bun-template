@@ -16,7 +16,7 @@
  *   2. telemetry (logger, tracer, meter, health registry)
  *   3. infrastructure (db, valkey — async)
  *   4. server (Hono app + Application)
- *   5. features (example)
+ *   5. features (via the registry in src/features/features.ts)
  *
  * Keys are `Symbol("Name")` values exported from each module
  * (e.g. `export const ConfigKey = Symbol("Config")`).
