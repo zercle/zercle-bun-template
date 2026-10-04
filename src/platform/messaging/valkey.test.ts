@@ -45,11 +45,15 @@ function makeConfig(overrides: Partial<Config["valkey"]> = {}): Config {
       password: "",
       db: 0,
       connect_timeout: 5,
+      ttl: 30,
       ...overrides,
     },
     otel: { exporter: "none", endpoint: "", service_name: "zercle-bun-template", sampling: 1.0 },
     log: { level: "info", format: "json" },
     example: { enabled: false, default_page_size: 20, max_page_size: 100, max_name_length: 255 },
+    catalog: { enabled: true, default_page_size: 20, max_page_size: 100, max_name_length: 255 },
+    machines: { enabled: true, default_page_size: 20, max_page_size: 100, max_label_length: 255 },
+    sales: { enabled: true },
   };
 }
 
@@ -199,6 +203,10 @@ describe("register", () => {
 
     const client = container.resolve<ValkeyClient>(ValkeyKey);
     expect(client).toBeDefined();
+
+    const { CacheAsideKey } = await import("./cache-aside");
+    const cache = container.resolve<unknown>(CacheAsideKey);
+    expect(cache).toBeDefined();
 
     const registry = container.resolve<HealthRegistry>(HealthRegistryKey);
     // Verify the checker is wired in by exercising the public ready() path.

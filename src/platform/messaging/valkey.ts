@@ -10,6 +10,9 @@ import Redis from "ioredis";
 import type { Container } from "../../app/container";
 import { type Config, ConfigKey } from "../../config/config";
 import { type Checker, type HealthRegistry, HealthRegistryKey } from "../telemetry/health";
+import { CacheAside, CacheAsideKey } from "./cache-aside";
+
+export { CacheAside, CacheAsideKey } from "./cache-aside";
 
 /** Concrete ioredis client type used across the app. */
 export type ValkeyClient = Redis;
@@ -75,11 +78,15 @@ export function valkeyChecker(client: ValkeyClient): Checker {
  * exposes it under {@link ValkeyKey}. The checker is added to readiness
  * (not liveness) so a transient Valkey outage surfaces via `/readyz`
  * without restarting the process.
+ *
+ * Also builds the cache-aside facade over the same client and registers it
+ * under {@link CacheAsideKey}, using `valkey.ttl` as the entry TTL.
  */
 export async function register(container: Container): Promise<void> {
   const cfg = container.resolve<Config>(ConfigKey);
   const client = await createValkey(cfg);
   container.registerValue(ValkeyKey, client);
+  container.registerValue(CacheAsideKey, new CacheAside(client, cfg.valkey.ttl));
 
   const registry = container.resolve<HealthRegistry>(HealthRegistryKey);
   registry.addReadiness(valkeyChecker(client));

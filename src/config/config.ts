@@ -158,6 +158,9 @@ const ValkeySchema = z.object({
   password: z.string().default(""),
   db: z.number().int().min(0).default(0),
   connect_timeout: durationSeconds.default(5),
+  // TTL is how long a cache-aside entry stays valid in Valkey (Go
+  // `ValkeyConfig.TTL`).
+  ttl: durationSeconds.default(30),
 });
 
 const OTelSchema = z.object({
@@ -179,6 +182,27 @@ const ExampleSchema = z.object({
   max_name_length: z.number().int().min(1).default(255),
 });
 
+/** Feature toggle and pagination/name bounds, mirroring Go `CatalogConfig`. */
+const CatalogSchema = z.object({
+  enabled: z.boolean().default(true),
+  default_page_size: z.number().int().min(1).default(20),
+  max_page_size: z.number().int().min(1).default(100),
+  max_name_length: z.number().int().min(1).default(255),
+});
+
+/** Feature toggle and pagination/label bounds, mirroring Go `MachinesConfig`. */
+const MachinesSchema = z.object({
+  enabled: z.boolean().default(true),
+  default_page_size: z.number().int().min(1).default(20),
+  max_page_size: z.number().int().min(1).default(100),
+  max_label_length: z.number().int().min(1).default(255),
+});
+
+/** Feature toggle, mirroring Go `SalesConfig`. */
+const SalesSchema = z.object({
+  enabled: z.boolean().default(true),
+});
+
 export const ConfigSchema = z.object({
   app: AppSchema,
   http: HTTPSchema,
@@ -187,6 +211,9 @@ export const ConfigSchema = z.object({
   otel: OTelSchema,
   log: LogSchema,
   example: ExampleSchema,
+  catalog: CatalogSchema,
+  machines: MachinesSchema,
+  sales: SalesSchema,
 });
 
 /** Resolved configuration. Inferred from `ConfigSchema`; durations are `number` (seconds). */
@@ -248,6 +275,7 @@ const LEAF_BINDINGS: readonly LeafBinding[] = [
   { key: "valkey.password", envName: "VALKEY_PASSWORD", parse: (v) => v },
   { key: "valkey.db", envName: "VALKEY_DB", parse: (v) => Number(v) },
   { key: "valkey.connect_timeout", envName: "VALKEY_CONNECT_TIMEOUT", parse: (v) => v },
+  { key: "valkey.ttl", envName: "VALKEY_TTL", parse: (v) => v },
   // otel
   { key: "otel.exporter", envName: "OTEL_EXPORTER", parse: (v) => v },
   { key: "otel.endpoint", envName: "OTEL_EXPORTER_OTLP_ENDPOINT", parse: (v) => v },
@@ -265,6 +293,34 @@ const LEAF_BINDINGS: readonly LeafBinding[] = [
   },
   { key: "example.max_page_size", envName: "EXAMPLE_MAX_PAGE_SIZE", parse: (v) => Number(v) },
   { key: "example.max_name_length", envName: "EXAMPLE_MAX_NAME_LENGTH", parse: (v) => Number(v) },
+  // catalog
+  { key: "catalog.enabled", envName: "CATALOG_ENABLED", parse: (v) => v === "true" || v === "1" },
+  {
+    key: "catalog.default_page_size",
+    envName: "CATALOG_DEFAULT_PAGE_SIZE",
+    parse: (v) => Number(v),
+  },
+  { key: "catalog.max_page_size", envName: "CATALOG_MAX_PAGE_SIZE", parse: (v) => Number(v) },
+  { key: "catalog.max_name_length", envName: "CATALOG_MAX_NAME_LENGTH", parse: (v) => Number(v) },
+  // machines
+  {
+    key: "machines.enabled",
+    envName: "MACHINES_ENABLED",
+    parse: (v) => v === "true" || v === "1",
+  },
+  {
+    key: "machines.default_page_size",
+    envName: "MACHINES_DEFAULT_PAGE_SIZE",
+    parse: (v) => Number(v),
+  },
+  { key: "machines.max_page_size", envName: "MACHINES_MAX_PAGE_SIZE", parse: (v) => Number(v) },
+  {
+    key: "machines.max_label_length",
+    envName: "MACHINES_MAX_LABEL_LENGTH",
+    parse: (v) => Number(v),
+  },
+  // sales
+  { key: "sales.enabled", envName: "SALES_ENABLED", parse: (v) => v === "true" || v === "1" },
 ];
 
 // ---------- merging -----------------------------------------------------------
@@ -332,7 +388,18 @@ export function loadConfig(): Config {
 
   // Ensure every top-level section exists so Zod's per-field defaults can
   // cascade when a section is missing from both the file and env.
-  const TOP_LEVEL_KEYS = ["app", "http", "db", "valkey", "otel", "log", "example"] as const;
+  const TOP_LEVEL_KEYS = [
+    "app",
+    "http",
+    "db",
+    "valkey",
+    "otel",
+    "log",
+    "example",
+    "catalog",
+    "machines",
+    "sales",
+  ] as const;
   for (const k of TOP_LEVEL_KEYS) {
     if (!(k in fileConfig)) fileConfig[k] = {};
   }

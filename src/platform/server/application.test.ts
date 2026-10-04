@@ -73,10 +73,13 @@ function makeConfig(): Config {
       max_conn_life: 1,
       connect_timeout: 1,
     },
-    valkey: { host: "x", port: 1, password: "", db: 0, connect_timeout: 1 },
+    valkey: { host: "x", port: 1, password: "", db: 0, connect_timeout: 1, ttl: 30 },
     otel: { exporter: "none", endpoint: "", service_name: "t", sampling: 1 },
     log: { level: "error", format: "json" },
     example: { enabled: false, default_page_size: 1, max_page_size: 1, max_name_length: 1 },
+    catalog: { enabled: true, default_page_size: 20, max_page_size: 100, max_name_length: 255 },
+    machines: { enabled: true, default_page_size: 20, max_page_size: 100, max_label_length: 255 },
+    sales: { enabled: true },
   } as Config;
 }
 

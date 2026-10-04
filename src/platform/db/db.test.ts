@@ -63,6 +63,7 @@ const fullCfg = {
     password: "",
     db: 0,
     connect_timeout: 5,
+    ttl: 30,
   },
   otel: {
     exporter: "none" as const,
@@ -77,6 +78,19 @@ const fullCfg = {
     max_page_size: 100,
     max_name_length: 255,
   },
+  catalog: {
+    enabled: true,
+    default_page_size: 20,
+    max_page_size: 100,
+    max_name_length: 255,
+  },
+  machines: {
+    enabled: true,
+    default_page_size: 20,
+    max_page_size: 100,
+    max_label_length: 255,
+  },
+  sales: { enabled: true },
 };
 
 afterEach(() => {

@@ -96,6 +96,20 @@ describe("loadConfig — file + env merge", () => {
     expect(cfg.db.min_conns).toBe(2);
     expect(cfg.db.max_conn_idle).toBe(1800);
     expect(cfg.example.enabled).toBe(false);
+    expect(cfg.valkey.ttl).toBe(30);
+    expect(cfg.catalog).toEqual({
+      enabled: true,
+      default_page_size: 20,
+      max_page_size: 100,
+      max_name_length: 255,
+    });
+    expect(cfg.machines).toEqual({
+      enabled: true,
+      default_page_size: 20,
+      max_page_size: 100,
+      max_label_length: 255,
+    });
+    expect(cfg.sales).toEqual({ enabled: true });
   });
 
   it("env overrides file values (env wins)", () => {
@@ -115,6 +129,35 @@ describe("loadConfig — file + env merge", () => {
     expect(cfg.http.cors_allow_origins).toEqual(["https://a.example", "https://b.example"]);
     expect(cfg.example.enabled).toBe(true);
     expect(cfg.otel.sampling).toBe(0.25);
+  });
+
+  it("env overrides new feature sections and valkey ttl", () => {
+    vi.stubEnv("CATALOG_ENABLED", "false");
+    vi.stubEnv("CATALOG_DEFAULT_PAGE_SIZE", "5");
+    vi.stubEnv("CATALOG_MAX_PAGE_SIZE", "50");
+    vi.stubEnv("CATALOG_MAX_NAME_LENGTH", "128");
+    vi.stubEnv("MACHINES_ENABLED", "0");
+    vi.stubEnv("MACHINES_DEFAULT_PAGE_SIZE", "10");
+    vi.stubEnv("MACHINES_MAX_PAGE_SIZE", "40");
+    vi.stubEnv("MACHINES_MAX_LABEL_LENGTH", "64");
+    vi.stubEnv("SALES_ENABLED", "false");
+    vi.stubEnv("VALKEY_TTL", "1m");
+
+    const cfg = loadConfig();
+    expect(cfg.catalog).toEqual({
+      enabled: false,
+      default_page_size: 5,
+      max_page_size: 50,
+      max_name_length: 128,
+    });
+    expect(cfg.machines).toEqual({
+      enabled: false,
+      default_page_size: 10,
+      max_page_size: 40,
+      max_label_length: 64,
+    });
+    expect(cfg.sales.enabled).toBe(false);
+    expect(cfg.valkey.ttl).toBe(60);
   });
 
   it("returns ConfigKey symbol with description 'Config'", () => {
@@ -146,6 +189,13 @@ describe("loadConfig — file missing", () => {
     expect(cfg.valkey.host).toBe("env-valkey");
     expect(cfg.app.name).toBe("zercle-bun-template");
     expect(cfg.app.port).toBe(8080);
+    // New section defaults cascade even with no file/env input.
+    expect(cfg.catalog.enabled).toBe(true);
+    expect(cfg.catalog.default_page_size).toBe(20);
+    expect(cfg.machines.enabled).toBe(true);
+    expect(cfg.machines.max_label_length).toBe(255);
+    expect(cfg.sales.enabled).toBe(true);
+    expect(cfg.valkey.ttl).toBe(30);
   });
 });
 
