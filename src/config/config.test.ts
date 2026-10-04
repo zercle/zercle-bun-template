@@ -95,7 +95,6 @@ describe("loadConfig — file + env merge", () => {
     expect(cfg.db.max_conns).toBe(10);
     expect(cfg.db.min_conns).toBe(2);
     expect(cfg.db.max_conn_idle).toBe(1800);
-    expect(cfg.example.enabled).toBe(false);
     expect(cfg.valkey.ttl).toBe(30);
     expect(cfg.catalog).toEqual({
       enabled: true,
@@ -118,7 +117,6 @@ describe("loadConfig — file + env merge", () => {
     vi.stubEnv("HTTP_READ_TIMEOUT", "30s");
     vi.stubEnv("DB_MAX_CONNS", "25");
     vi.stubEnv("HTTP_CORS_ALLOW_ORIGINS", "https://a.example, https://b.example");
-    vi.stubEnv("EXAMPLE_ENABLED", "true");
     vi.stubEnv("OTEL_TRACES_SAMPLER_ARG", "0.25");
 
     const cfg = loadConfig();
@@ -127,7 +125,6 @@ describe("loadConfig — file + env merge", () => {
     expect(cfg.http.read_timeout).toBe(30);
     expect(cfg.db.max_conns).toBe(25);
     expect(cfg.http.cors_allow_origins).toEqual(["https://a.example", "https://b.example"]);
-    expect(cfg.example.enabled).toBe(true);
     expect(cfg.otel.sampling).toBe(0.25);
   });
 

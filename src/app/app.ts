@@ -6,7 +6,7 @@
  *   2. telemetry (logger, tracer, meter, health registry)
  *   3. platform resources (db, valkey — async, requires live services)
  *   4. server (Hono app + Application)
- *   5. features (example)
+ *   5. features (catalog, machines, sales — via the feature registry)
  *
  * `build()` connects to real services. Tests should build a Hono app directly
  * via `buildApp(container)` against a hand-populated container — see
@@ -14,7 +14,7 @@
  */
 import type pino from "pino";
 import { ConfigKey, loadConfig } from "../config/config.ts";
-import * as example from "../features/example/di.ts";
+import { registerAll } from "../features/features.ts";
 import * as db from "../platform/db/register.ts";
 import * as valkey from "../platform/messaging/valkey.ts";
 import { type Application, ApplicationKey } from "../platform/server/index.ts";
@@ -37,7 +37,7 @@ export async function build(container: Container): Promise<Application> {
   await runStep("db", () => db.register(container));
   await runStep("valkey", () => valkey.register(container));
   runStepSync("server", () => server.register(container));
-  runStepSync("example", () => example.register(container));
+  runStepSync("features", () => registerAll(container));
 
   return container.resolve<Application>(ApplicationKey);
 }

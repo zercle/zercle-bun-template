@@ -7,14 +7,15 @@
 import type pino from "pino";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { fakeApp, loggerInfo, loggerError } = vi.hoisted(() => {
+const { fakeApp, loggerInfo, loggerError, registerAllMock } = vi.hoisted(() => {
   const fakeApp = {
     start: vi.fn().mockResolvedValue(undefined),
     stop: vi.fn().mockResolvedValue(undefined),
   };
   const loggerInfo = vi.fn();
   const loggerError = vi.fn();
-  return { fakeApp, loggerInfo, loggerError };
+  const registerAllMock = vi.fn();
+  return { fakeApp, loggerInfo, loggerError, registerAllMock };
 });
 
 const fakeLogger = {
@@ -53,8 +54,8 @@ vi.mock("../platform/server/index.ts", () => ({
   ApplicationKey: Symbol.for("Application"),
 }));
 
-vi.mock("../features/example/di.ts", () => ({
-  register: vi.fn(),
+vi.mock("../features/features.ts", () => ({
+  registerAll: registerAllMock,
 }));
 
 vi.mock("./container.ts", () => {
@@ -87,6 +88,7 @@ beforeAll(() => {
 beforeEach(async () => {
   loggerInfo.mockReset();
   loggerError.mockReset();
+  registerAllMock.mockReset();
   fakeApp.start.mockClear();
   fakeApp.stop.mockReset().mockResolvedValue(undefined);
   fakeApp.start.mockClear();
@@ -134,6 +136,16 @@ async function waitFor(predicate: () => boolean, timeoutMs = 1000): Promise<void
 }
 
 describe("app.run shutdown", () => {
+  it("wires features through the registry during build", async () => {
+    vi.spyOn(process, "exit").mockImplementation((() => undefined as never) as never);
+    clearSignalHandlers();
+
+    const run = await loadRun();
+    await run();
+
+    expect(registerAllMock).toHaveBeenCalledTimes(1);
+  });
+
   it("logs and exits 1 when application.stop rejects", async () => {
     let exitCallCount = 0;
     const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {

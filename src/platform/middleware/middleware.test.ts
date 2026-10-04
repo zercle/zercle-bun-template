@@ -50,10 +50,13 @@ function makeConfig(overrides: Partial<Config["http"]> = {}): Config {
       password: "",
       db: 0,
       connect_timeout: 5,
+      ttl: 30,
     },
     otel: { exporter: "none", endpoint: "", service_name: "zercle-bun-template", sampling: 1 },
     log: { level: "info", format: "json" },
-    example: { enabled: false, default_page_size: 20, max_page_size: 100, max_name_length: 255 },
+    catalog: { enabled: true, default_page_size: 20, max_page_size: 100, max_name_length: 255 },
+    machines: { enabled: true, default_page_size: 20, max_page_size: 100, max_label_length: 255 },
+    sales: { enabled: true },
   } as Config;
 }
 

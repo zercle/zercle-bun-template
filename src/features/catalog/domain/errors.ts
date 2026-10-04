@@ -6,4 +6,4 @@
 export const ErrProductNotFound = new Error("product not found");
 export const ErrInvalidID = new Error("product id is invalid");
 export const ErrInvalidProductName = new Error("product name is invalid");
-export const ErrInvalidPrice = new Error("invalid price");
+export const ErrInvalidPrice = new Error("product price is invalid");

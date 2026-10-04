@@ -175,13 +175,6 @@ const LogSchema = z.object({
   format: LogFormatEnum.default("json"),
 });
 
-const ExampleSchema = z.object({
-  enabled: z.boolean().default(false),
-  default_page_size: z.number().int().min(1).default(20),
-  max_page_size: z.number().int().min(1).default(100),
-  max_name_length: z.number().int().min(1).default(255),
-});
-
 /** Feature toggle and pagination/name bounds, mirroring Go `CatalogConfig`. */
 const CatalogSchema = z.object({
   enabled: z.boolean().default(true),
@@ -210,7 +203,6 @@ export const ConfigSchema = z.object({
   valkey: ValkeySchema,
   otel: OTelSchema,
   log: LogSchema,
-  example: ExampleSchema,
   catalog: CatalogSchema,
   machines: MachinesSchema,
   sales: SalesSchema,
@@ -284,15 +276,6 @@ const LEAF_BINDINGS: readonly LeafBinding[] = [
   // log
   { key: "log.level", envName: "LOG_LEVEL", parse: (v) => v },
   { key: "log.format", envName: "LOG_FORMAT", parse: (v) => v },
-  // example
-  { key: "example.enabled", envName: "EXAMPLE_ENABLED", parse: (v) => v === "true" || v === "1" },
-  {
-    key: "example.default_page_size",
-    envName: "EXAMPLE_DEFAULT_PAGE_SIZE",
-    parse: (v) => Number(v),
-  },
-  { key: "example.max_page_size", envName: "EXAMPLE_MAX_PAGE_SIZE", parse: (v) => Number(v) },
-  { key: "example.max_name_length", envName: "EXAMPLE_MAX_NAME_LENGTH", parse: (v) => Number(v) },
   // catalog
   { key: "catalog.enabled", envName: "CATALOG_ENABLED", parse: (v) => v === "true" || v === "1" },
   {
@@ -395,7 +378,6 @@ export function loadConfig(): Config {
     "valkey",
     "otel",
     "log",
-    "example",
     "catalog",
     "machines",
     "sales",
