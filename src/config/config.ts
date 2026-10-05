@@ -196,6 +196,13 @@ const SalesSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
+/** Feature toggle and leaderboard bounds, mirroring Go `ReportingConfig`. */
+const ReportingSchema = z.object({
+  enabled: z.boolean().default(true),
+  default_top_machines: z.number().int().min(1).default(5),
+  max_top_machines: z.number().int().min(1).default(20),
+});
+
 export const ConfigSchema = z.object({
   app: AppSchema,
   http: HTTPSchema,
@@ -206,6 +213,7 @@ export const ConfigSchema = z.object({
   catalog: CatalogSchema,
   machines: MachinesSchema,
   sales: SalesSchema,
+  reporting: ReportingSchema,
 });
 
 /** Resolved configuration. Inferred from `ConfigSchema`; durations are `number` (seconds). */
@@ -304,6 +312,22 @@ const LEAF_BINDINGS: readonly LeafBinding[] = [
   },
   // sales
   { key: "sales.enabled", envName: "SALES_ENABLED", parse: (v) => v === "true" || v === "1" },
+  // reporting
+  {
+    key: "reporting.enabled",
+    envName: "REPORTING_ENABLED",
+    parse: (v) => v === "true" || v === "1",
+  },
+  {
+    key: "reporting.default_top_machines",
+    envName: "REPORTING_DEFAULT_TOP_MACHINES",
+    parse: (v) => Number(v),
+  },
+  {
+    key: "reporting.max_top_machines",
+    envName: "REPORTING_MAX_TOP_MACHINES",
+    parse: (v) => Number(v),
+  },
 ];
 
 // ---------- merging -----------------------------------------------------------
@@ -381,6 +405,7 @@ export function loadConfig(): Config {
     "catalog",
     "machines",
     "sales",
+    "reporting",
   ] as const;
   for (const k of TOP_LEVEL_KEYS) {
     if (!(k in fileConfig)) fileConfig[k] = {};
@@ -454,6 +479,20 @@ function validateCrossSection(cfg: Config): void {
   }
   if (cfg.db.max_conns < cfg.db.min_conns) {
     throw new ConfigError("DB_MAX_CONNS must be >= DB_MIN_CONNS");
+  }
+  if (cfg.reporting.enabled) {
+    if (cfg.reporting.default_top_machines < 1) {
+      throw new ConfigError("REPORTING_DEFAULT_TOP_MACHINES must >= 1");
+    }
+    if (cfg.reporting.max_top_machines < 1) {
+      throw new ConfigError("REPORTING_MAX_TOP_MACHINES must >= 1");
+    }
+    if (cfg.reporting.default_top_machines > cfg.reporting.max_top_machines) {
+      throw new ConfigError("REPORTING_DEFAULT_TOP_MACHINES must <= REPORTING_MAX_TOP_MACHINES");
+    }
+    if (cfg.reporting.max_top_machines > 100) {
+      throw new ConfigError("REPORTING_MAX_TOP_MACHINES exceeds maximum allowed value 100");
+    }
   }
 }
 

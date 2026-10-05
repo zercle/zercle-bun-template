@@ -109,6 +109,11 @@ describe("loadConfig — file + env merge", () => {
       max_label_length: 255,
     });
     expect(cfg.sales).toEqual({ enabled: true });
+    expect(cfg.reporting).toEqual({
+      enabled: true,
+      default_top_machines: 5,
+      max_top_machines: 20,
+    });
   });
 
   it("env overrides file values (env wins)", () => {
@@ -138,6 +143,9 @@ describe("loadConfig — file + env merge", () => {
     vi.stubEnv("MACHINES_MAX_PAGE_SIZE", "40");
     vi.stubEnv("MACHINES_MAX_LABEL_LENGTH", "64");
     vi.stubEnv("SALES_ENABLED", "false");
+    vi.stubEnv("REPORTING_ENABLED", "false");
+    vi.stubEnv("REPORTING_DEFAULT_TOP_MACHINES", "3");
+    vi.stubEnv("REPORTING_MAX_TOP_MACHINES", "15");
     vi.stubEnv("VALKEY_TTL", "1m");
 
     const cfg = loadConfig();
@@ -154,6 +162,11 @@ describe("loadConfig — file + env merge", () => {
       max_label_length: 64,
     });
     expect(cfg.sales.enabled).toBe(false);
+    expect(cfg.reporting).toEqual({
+      enabled: false,
+      default_top_machines: 3,
+      max_top_machines: 15,
+    });
     expect(cfg.valkey.ttl).toBe(60);
   });
 
@@ -192,6 +205,9 @@ describe("loadConfig — file missing", () => {
     expect(cfg.machines.enabled).toBe(true);
     expect(cfg.machines.max_label_length).toBe(255);
     expect(cfg.sales.enabled).toBe(true);
+    expect(cfg.reporting.enabled).toBe(true);
+    expect(cfg.reporting.default_top_machines).toBe(5);
+    expect(cfg.reporting.max_top_machines).toBe(20);
     expect(cfg.valkey.ttl).toBe(30);
   });
 });
@@ -231,6 +247,31 @@ describe("loadConfig — cross-section validation", () => {
     const cfg = loadConfig();
     expect(cfg.otel.exporter).toBe("otlp");
     expect(cfg.otel.endpoint).toBe("http://collector:4318");
+  });
+
+  it("throws ConfigError when reporting.default_top_machines > reporting.max_top_machines", () => {
+    vi.stubEnv("REPORTING_DEFAULT_TOP_MACHINES", "10");
+    vi.stubEnv("REPORTING_MAX_TOP_MACHINES", "5");
+    expect(() => loadConfig()).toThrow(ConfigError);
+    expect(() => loadConfig()).toThrow(
+      "REPORTING_DEFAULT_TOP_MACHINES must <= REPORTING_MAX_TOP_MACHINES",
+    );
+  });
+
+  it("throws ConfigError when reporting.max_top_machines exceeds 100", () => {
+    vi.stubEnv("REPORTING_MAX_TOP_MACHINES", "101");
+    expect(() => loadConfig()).toThrow(ConfigError);
+    expect(() => loadConfig()).toThrow("REPORTING_MAX_TOP_MACHINES exceeds maximum allowed value 100");
+  });
+
+  it("skips reporting cross-section validation when disabled", () => {
+    vi.stubEnv("REPORTING_ENABLED", "false");
+    vi.stubEnv("REPORTING_DEFAULT_TOP_MACHINES", "10");
+    vi.stubEnv("REPORTING_MAX_TOP_MACHINES", "5");
+    const cfg = loadConfig();
+    expect(cfg.reporting.enabled).toBe(false);
+    expect(cfg.reporting.default_top_machines).toBe(10);
+    expect(cfg.reporting.max_top_machines).toBe(5);
   });
 });
 

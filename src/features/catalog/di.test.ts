@@ -108,6 +108,7 @@ function makeCfg(catalogEnabled = true): Config {
       max_label_length: 255,
     },
     sales: { enabled: true },
+    reporting: { enabled: true, default_top_machines: 5, max_top_machines: 20 },
   } as Config;
 }
 

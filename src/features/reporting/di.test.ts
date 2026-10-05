@@ -1,8 +1,9 @@
 /**
- * Unit tests for the example feature's DI registration. We provide a
+ * Unit tests for the reporting feature's DI registration. We provide a
  * container with `Config`, `DBHandle`, and a Hono `App` already registered,
- * then assert that `register` mounts the sales router at `/api/v1`, wires the
- * sentinel mappings, and skips the feature entirely when disabled.
+ * then assert that `register` mounts the reporting router at `/api/v1`, maps
+ * the sentinel, passes the configured bounds into the use case, and skips the
+ * feature entirely when disabled.
  */
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,10 +12,10 @@ import { type Config, ConfigKey } from "../../config/config.ts";
 import { type DBHandle, DBKey } from "../../platform/db/index.ts";
 import { AppKey } from "../../platform/server/index.ts";
 
-const { sqlFn, fakeSql } = vi.hoisted(() => {
+const { sqlFn, fakeSql, ctorArgs } = vi.hoisted(() => {
   const sqlFn = vi.fn(() => Promise.resolve([]));
   const fakeSql = Object.assign(sqlFn, { end: vi.fn() });
-  return { sqlFn, fakeSql };
+  return { sqlFn, fakeSql, ctorArgs: [] as unknown[][] };
 });
 
 vi.mock("../../platform/db/db.ts", () => ({
@@ -48,15 +49,27 @@ vi.mock("drizzle-orm/postgres-js", () => ({
   drizzle: () => ({ _drizzle: true }),
 }));
 
+vi.mock("./application/usecase.ts", () => ({
+  ReportingUsecase: class {
+    constructor(...args: unknown[]) {
+      ctorArgs.push(args);
+    }
+    summary(): Promise<never> {
+      return Promise.reject(new Error("not used"));
+    }
+  },
+}));
+
 beforeEach(() => {
   sqlFn.mockReset().mockImplementation(() => Promise.resolve([]));
+  ctorArgs.length = 0;
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function makeCfg(salesEnabled: boolean): Config {
+function makeCfg(reportingEnabled: boolean, defaultTop = 5, maxTop = 20): Config {
   return {
     app: {
       name: "t",
@@ -105,15 +118,19 @@ function makeCfg(salesEnabled: boolean): Config {
       max_page_size: 100,
       max_label_length: 255,
     },
-    sales: { enabled: salesEnabled },
-    reporting: { enabled: true, default_top_machines: 5, max_top_machines: 20 },
+    sales: { enabled: true },
+    reporting: {
+      enabled: reportingEnabled,
+      default_top_machines: defaultTop,
+      max_top_machines: maxTop,
+    },
   } as Config;
 }
 
-function makeContainer(salesEnabled: boolean): Container {
+function makeContainer(reportingEnabled: boolean, defaultTop = 5, maxTop = 20): Container {
   const container = new Container();
   const app = new Hono();
-  container.registerValue(ConfigKey, makeCfg(salesEnabled));
+  container.registerValue(ConfigKey, makeCfg(reportingEnabled, defaultTop, maxTop));
   container.registerValue(DBKey, {
     db: { _drizzle: true },
     sql: fakeSql,
@@ -123,8 +140,8 @@ function makeContainer(salesEnabled: boolean): Container {
   return container;
 }
 
-describe("sales.register", () => {
-  it("mounts the sales router at /api/v1/purchases on the existing Hono app", async () => {
+describe("reporting.register", () => {
+  it("mounts the reporting router at /api/v1/reports/summary", async () => {
     const { register } = await import("./di.ts");
     const container = makeContainer(true);
 
@@ -132,11 +149,11 @@ describe("sales.register", () => {
 
     const app = container.resolve<Hono>(AppKey);
     expect(app.routes).toContainEqual(
-      expect.objectContaining({ method: "POST", path: "/api/v1/purchases" }),
+      expect.objectContaining({ method: "GET", path: "/api/v1/reports/summary" }),
     );
   });
 
-  it("registers sentinels mapping domain errors to AppError codes", async () => {
+  it("registers the sentinel mapping the domain error to INVALID_INPUT", async () => {
     const { register } = await import("./di.ts");
     const { httpError } = await import("../../platform/errors/mapper.ts");
     const domain = await import("./domain/errors.ts");
@@ -144,24 +161,30 @@ describe("sales.register", () => {
 
     register(container);
 
-    expect(httpError(domain.ErrProductNotFound).status).toBe(404);
-    expect(httpError(domain.ErrMachineNotFound).status).toBe(404);
-    expect(httpError(domain.ErrOutOfStock).status).toBe(409);
-    expect(httpError(domain.ErrInvalidID).status).toBe(400);
-    expect(httpError(domain.ErrUnsupportedCoin).status).toBe(400);
-    expect(httpError(domain.ErrInsufficientPayment).status).toBe(400);
-    expect(httpError(domain.ErrExactChangeRequired).status).toBe(400);
+    expect(httpError(domain.ErrInvalidTopMachines).status).toBe(400);
+  });
+
+  it("passes the configured bounds into the use case", async () => {
+    const { register } = await import("./di.ts");
+    const container = makeContainer(true, 7, 9);
+
+    register(container);
+
+    expect(ctorArgs).toHaveLength(1);
+    expect(ctorArgs[0]?.[1]).toBe(7);
+    expect(ctorArgs[0]?.[2]).toBe(9);
   });
 
   it("registers nothing when the feature is disabled", async () => {
     const { register } = await import("./di.ts");
-    const { SalesRouterKey } = await import("./di.ts");
+    const { ReportingRouterKey } = await import("./di.ts");
     const container = makeContainer(false);
 
     register(container);
 
     const app = container.resolve<Hono>(AppKey);
-    expect(app.routes.some((r) => r.path === "/api/v1/purchases")).toBe(false);
-    expect(container.tryResolve(SalesRouterKey)).toBeUndefined();
+    expect(app.routes.some((r) => r.path === "/api/v1/reports/summary")).toBe(false);
+    expect(container.tryResolve(ReportingRouterKey)).toBeUndefined();
+    expect(ctorArgs).toHaveLength(0);
   });
 });

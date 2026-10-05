@@ -53,6 +53,7 @@ function makeConfig(overrides: Partial<Config["valkey"]> = {}): Config {
     catalog: { enabled: true, default_page_size: 20, max_page_size: 100, max_name_length: 255 },
     machines: { enabled: true, default_page_size: 20, max_page_size: 100, max_label_length: 255 },
     sales: { enabled: true },
+    reporting: { enabled: true, default_top_machines: 5, max_top_machines: 20 },
   };
 }
 
