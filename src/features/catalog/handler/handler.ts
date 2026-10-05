@@ -1,16 +1,17 @@
 /**
- * Driving adapter exposing the catalog feature over HTTP. Parses requests
- * into the wire contract, delegates to the application `ProductService` port,
- * and maps errors through the platform envelope. It never touches outbound
- * ports or driven adapters directly (enforced by `src/architecture.test.ts`).
+ * HTTP handler exposing the catalog feature over HTTP. Parses requests into
+ * the wire contract, delegates to the usecase `ProductService` interface, and
+ * maps errors through the infrastructure envelope. It never touches the
+ * repository or its postgres implementation directly (enforced by
+ * `src/architecture.test.ts`).
  */
 import { Hono } from "hono";
-import { ErrInvalidInput } from "../../../../../platform/errors/app-error.ts";
-import { httpError } from "../../../../../platform/errors/mapper.ts";
-import type { ProductService } from "../../../application/service.ts";
-import { CreateProductRequest } from "../../../contract/create-product.ts";
-import { ListProductsRequest } from "../../../contract/list-products.ts";
-import { ErrInvalidID } from "../../../domain/errors.ts";
+import { ErrInvalidInput } from "../../../infrastructure/errors/app-error.ts";
+import { httpError } from "../../../infrastructure/errors/mapper.ts";
+import { CreateProductRequest } from "../contract/create-product.ts";
+import { ListProductsRequest } from "../contract/list-products.ts";
+import { ErrInvalidID } from "../domain/errors.ts";
+import type { ProductService } from "../usecase/service.ts";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
