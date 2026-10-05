@@ -58,6 +58,20 @@ interface ErrorEnvelope {
   message: string;
 }
 
+interface MachineSales {
+  machine_id: string;
+  label: string;
+  purchase_count: number;
+  revenue_cents: number;
+}
+
+interface SummaryResponse {
+  catalog: { product_count: number; total_stock: number };
+  machines: { machine_count: number; total_coin_bank_cents: number };
+  sales: { purchase_count: number; revenue_cents: number };
+  top_machines: MachineSales[];
+}
+
 describe.skipIf(!LIVE)("server e2e — vending demo", () => {
   const runSuffix = `${process.pid}-${Date.now()}`;
   let child: ChildProcess | undefined;
@@ -211,6 +225,37 @@ describe.skipIf(!LIVE)("server e2e — vending demo", () => {
       product_id: productId,
       coins: [5],
     });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as ErrorEnvelope;
+    expect(body.error).toBe("INVALID_INPUT");
+  });
+
+  // Reporting runs after the purchases above so the summary has rows to
+  // aggregate. Totals are asserted with `>=` because earlier e2e runs may
+  // leave rows behind; the machine's own leaderboard row is identified by id
+  // and asserted exactly. `top=20` is the configured max_top_machines, which
+  // keeps this suite's machine in the leaderboard regardless of leftovers.
+  it("reports cross-feature totals and the top machines by revenue", async () => {
+    const res = await fetch(`${CHILD_URL}/api/v1/reports/summary?top=20`);
+    expect(res.status).toBe(200);
+    const summary = (await res.json()) as SummaryResponse;
+
+    expect(summary.catalog.product_count).toBeGreaterThanOrEqual(1);
+    expect(summary.catalog.total_stock).toBeGreaterThanOrEqual(1);
+    expect(summary.machines.machine_count).toBeGreaterThanOrEqual(1);
+    expect(summary.machines.total_coin_bank_cents).toBeGreaterThanOrEqual(0);
+    expect(summary.sales.purchase_count).toBeGreaterThanOrEqual(1);
+    expect(summary.sales.revenue_cents).toBeGreaterThanOrEqual(75);
+
+    const ours = summary.top_machines.find((m) => m.machine_id === machineId);
+    expect(ours).toBeDefined();
+    expect(ours?.label).toBe(`e2e-machine-${runSuffix}`);
+    expect(ours?.purchase_count).toBe(1);
+    expect(ours?.revenue_cents).toBe(75);
+  });
+
+  it("returns a 400 envelope for a negative top query parameter", async () => {
+    const res = await fetch(`${CHILD_URL}/api/v1/reports/summary?top=-1`);
     expect(res.status).toBe(400);
     const body = (await res.json()) as ErrorEnvelope;
     expect(body.error).toBe("INVALID_INPUT");
