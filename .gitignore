@@ -39,5 +39,5 @@ Thumbs.db
 .worktrees/
 
 # drizzle-kit staging output (real migrations live per feature under
-# src/features/*/adapter/out/postgres/migrations)
+# src/features/*/repository/postgres/migrations)
 migrations/

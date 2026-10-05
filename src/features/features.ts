@@ -8,6 +8,7 @@
 import type { Container } from "../app/container.ts";
 import * as catalog from "./catalog/di.ts";
 import * as machines from "./machines/di.ts";
+import * as reporting from "./reporting/di.ts";
 import * as sales from "./sales/di.ts";
 
 /** One feature's wiring and persistence contribution. */
@@ -20,24 +21,29 @@ export interface Feature {
 
 /**
  * Ordered registry of features. The order is also the migration order: catalog
- * owns schema version 1, machines 2, and sales 3. Add one entry per feature;
- * leave `migrationsDir` unset when the feature owns no schema.
+ * owns schema version 1, machines 2, and sales 3; reporting owns no schema, so
+ * it carries no `migrationsDir` and contributes no migrations. Add one entry
+ * per feature; leave `migrationsDir` unset when the feature owns no schema.
  */
 export const features: readonly Feature[] = [
   {
     name: "catalog",
     register: catalog.register,
-    migrationsDir: "src/features/catalog/adapter/out/postgres/migrations",
+    migrationsDir: "src/features/catalog/repository/postgres/migrations",
   },
   {
     name: "machines",
     register: machines.register,
-    migrationsDir: "src/features/machines/adapter/out/postgres/migrations",
+    migrationsDir: "src/features/machines/repository/postgres/migrations",
   },
   {
     name: "sales",
     register: sales.register,
-    migrationsDir: "src/features/sales/adapter/out/postgres/migrations",
+    migrationsDir: "src/features/sales/repository/postgres/migrations",
+  },
+  {
+    name: "reporting",
+    register: reporting.register,
   },
 ];
 

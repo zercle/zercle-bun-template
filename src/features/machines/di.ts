@@ -1,27 +1,27 @@
 /**
- * Feature composition: registers sentinels, builds the driven adapter
- * (postgres repository), the application use case, and the driving HTTP
- * adapter, then mounts the router on the platform Hono app. When
+ * Feature composition: registers sentinels, builds the postgres repository
+ * implementation, the usecase, and the HTTP handler, then mounts the router on
+ * the infrastructure Hono app. When
  * `cfg.machines.enabled` is false the feature is not registered at all: no
  * sentinel mappings, no repository, no routes.
  */
 import type { Hono } from "hono";
 import type { Container } from "../../app/container.ts";
-import { type Config, ConfigKey } from "../../config/config.ts";
-import { type DBHandle, DBKey } from "../../platform/db/index.ts";
-import { ErrInvalidInput, ErrNotFound } from "../../platform/errors/app-error.ts";
-import { registerSentinel } from "../../platform/errors/sentinel.ts";
-import { AppKey } from "../../platform/server/index.ts";
-import { createMachinesRouter } from "./adapter/in/http/handler.ts";
-import { DrizzleMachineRepository } from "./adapter/out/postgres/repository.ts";
-import type { MachineService } from "./application/service.ts";
-import { MachineUsecase } from "./application/usecase.ts";
+import { type Config, ConfigKey } from "../../infrastructure/config/config.ts";
+import { type DBHandle, DBKey } from "../../infrastructure/db/index.ts";
+import { ErrInvalidInput, ErrNotFound } from "../../infrastructure/errors/app-error.ts";
+import { registerSentinel } from "../../infrastructure/errors/sentinel.ts";
+import { AppKey } from "../../infrastructure/server/index.ts";
 import {
   ErrInvalidID,
   ErrInvalidMachineLabel,
   ErrMachineNotFound,
   ErrUnsupportedCoin,
 } from "./domain/errors.ts";
+import { createMachinesRouter } from "./handler/handler.ts";
+import { DrizzleMachineRepository } from "./repository/postgres/repository.ts";
+import type { MachineService } from "./usecase/service.ts";
+import { MachineUsecase } from "./usecase/usecase.ts";
 
 export const MachinesRouterKey = Symbol("MachinesRouter");
 

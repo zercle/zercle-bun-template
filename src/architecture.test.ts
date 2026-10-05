@@ -6,11 +6,12 @@
  * template's `internal/architecture_test.go` and the dependency rule of the
  * clean-architecture reference:
  *
- *   - dependencies point inward: driving adapters -> application port ->
- *     outbound ports + domain; the domain depends on nothing
+ *   - dependencies point inward: handler -> usecase service ->
+ *     repository interface <- repository/postgres; the domain depends on
+ *     nothing
  *   - the wire contract is a dependency-free leaf, published outward only
  *     through the `src/index.ts` facade
- *   - platform code stays feature-agnostic
+ *   - infrastructure code stays feature-agnostic
  *
  * Test files are exempt (they wire fakes across layers by design), as is
  * `src/index.ts` itself (the facade's job is importing internals).
@@ -84,68 +85,81 @@ const rules: Rule[] = [
     },
   },
   {
-    name: "port-depends-only-on-domain",
-    why: "outbound ports may reference only their own feature's domain (and sibling port modules)",
+    name: "repository-interface-depends-only-on-domain",
+    why: "the outbound repository interface may reference only its own feature's domain and sibling repository modules",
     applies: (rel) => {
       const segs = segments(rel);
-      return segs[0] === "features" && segs[2] === "port";
+      return segs[0] === "features" && segs[2] === "repository" && segs[3] === undefined;
     },
     denied: (rel, imp) => {
       const f = featureOf(rel);
       if (imp.bare !== undefined) return true;
       if (imp.src === undefined) return false;
       const fdir = `features/${f}`;
-      return !(within(imp.src, `${fdir}/domain`) || within(imp.src, `${fdir}/port`));
-    },
-  },
-  {
-    name: "application-depends-on-domain-port-contract",
-    why: "use cases orchestrate their own feature's domain, ports, wire contract, and sibling application modules, nothing else",
-    applies: (rel) => {
-      const segs = segments(rel);
-      return segs[0] === "features" && segs[2] === "application";
-    },
-    denied: (rel, imp) => {
-      const f = featureOf(rel);
-      if (imp.bare !== undefined) return true;
-      if (imp.src === undefined) return false;
-      const fdir = `features/${f}`;
-      const allowed = ["domain", "port", "contract", "application"] as const;
-      return !allowed.some((layer) => within(imp.src as string, `${fdir}/${layer}`));
-    },
-  },
-  {
-    name: "driven-adapters-ignore-application",
-    why: "adapter/out satisfies ports structurally and must not know about the application layer or driving adapters",
-    applies: (rel) => {
-      const segs = segments(rel);
-      return segs[0] === "features" && segs[2] === "adapter" && segs[3] === "out";
-    },
-    denied: (rel, imp) => {
-      const f = featureOf(rel);
-      if (imp.src === undefined) return false;
-      return (
-        within(imp.src, `features/${f}/application`) || within(imp.src, `features/${f}/adapter/in`)
+      return !(
+        within(imp.src, `${fdir}/domain`) || posix.dirname(imp.src) === `${fdir}/repository`
       );
     },
   },
   {
-    name: "driving-adapters-ignore-ports-and-driven-adapters",
-    why: "adapter/in talks to the application port only, never to outbound ports or driven adapters",
+    name: "usecase-depends-on-domain-repository-contract",
+    why: "use cases orchestrate their own feature's domain, repository interface, wire contract, and sibling usecase modules, nothing else",
     applies: (rel) => {
       const segs = segments(rel);
-      return segs[0] === "features" && segs[2] === "adapter" && segs[3] === "in";
+      return segs[0] === "features" && segs[2] === "usecase";
+    },
+    denied: (rel, imp) => {
+      const f = featureOf(rel);
+      if (imp.bare !== undefined) return true;
+      if (imp.src === undefined) return false;
+      const fdir = `features/${f}`;
+      const topLevelRepository = posix.dirname(imp.src) === `${fdir}/repository`;
+      const allowed = ["domain", "contract", "usecase"] as const;
+      return !(
+        topLevelRepository || allowed.some((layer) => within(imp.src as string, `${fdir}/${layer}`))
+      );
+    },
+  },
+  {
+    name: "repository-impl-ignores-usecase-and-handler",
+    why: "the postgres repository implementation satisfies the repository interface structurally and must not know about the usecase or handler layers",
+    applies: (rel) => {
+      const segs = segments(rel);
+      return segs[0] === "features" && segs[2] === "repository" && segs[3] === "postgres";
     },
     denied: (rel, imp) => {
       const f = featureOf(rel);
       if (imp.src === undefined) return false;
-      return within(imp.src, `features/${f}/port`) || within(imp.src, `features/${f}/adapter/out`);
+      return within(imp.src, `features/${f}/usecase`) || within(imp.src, `features/${f}/handler`);
     },
   },
   {
-    name: "platform-ignores-features",
-    why: "cross-cutting platform code must stay feature-agnostic; features depend on platform, never the reverse",
-    applies: (rel) => rel === "platform" || rel.startsWith("platform/"),
+    name: "handler-ignores-repository",
+    why: "the HTTP handler talks to the usecase service only, never to the repository interface or its postgres implementation",
+    applies: (rel) => {
+      const segs = segments(rel);
+      return segs[0] === "features" && segs[2] === "handler";
+    },
+    denied: (rel, imp) => {
+      const f = featureOf(rel);
+      if (imp.src === undefined) return false;
+      return within(imp.src, `features/${f}/repository`);
+    },
+  },
+  {
+    name: "features-registry-imports-only-own-features",
+    why: "the feature registry enumerates features; it may depend only on the composition root's Container type and the features tree",
+    applies: (rel) => rel === "features",
+    denied: (_rel, imp) => {
+      if (imp.bare !== undefined) return true;
+      if (imp.src === undefined) return false;
+      return !(within(imp.src, "app/container") || within(imp.src, "features"));
+    },
+  },
+  {
+    name: "infrastructure-ignores-features",
+    why: "cross-cutting infrastructure must stay feature-agnostic; features depend on infrastructure, never the reverse",
+    applies: (rel) => rel === "infrastructure" || rel.startsWith("infrastructure/"),
     denied: (_rel, imp) => imp.src?.startsWith("features/") === true,
   },
 ];

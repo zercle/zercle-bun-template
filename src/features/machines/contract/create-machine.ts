@@ -10,7 +10,7 @@
 import { z } from "zod";
 
 export const CreateMachineRequest = z.object({
-  // No hardcoded max — the application-level `max_label_length` config is the
+  // No hardcoded max — the usecase-level `max_label_length` config is the
   // real authority. The 4096 ceiling is a generous safety guard only.
   label: z.string().min(1).max(4096),
   // Accepted coin denominations are a domain fact enforced by the usecase

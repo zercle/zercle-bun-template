@@ -27,30 +27,30 @@ const fakeLogger = {
   trace: vi.fn(),
 } as unknown as pino.Logger;
 
-vi.mock("../config/config.ts", () => ({
+vi.mock("../infrastructure/config/config.ts", () => ({
   ConfigKey: Symbol("Config"),
   loadConfig: () => ({ app: { name: "t" } }),
 }));
 
-vi.mock("../platform/telemetry/register.ts", () => ({
+vi.mock("../infrastructure/telemetry/register.ts", () => ({
   register: vi.fn(),
 }));
 
-vi.mock("../platform/db/register.ts", () => ({
+vi.mock("../infrastructure/db/register.ts", () => ({
   register: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../platform/messaging/valkey.ts", () => ({
+vi.mock("../infrastructure/messaging/valkey.ts", () => ({
   register: vi.fn().mockResolvedValue(undefined),
   ValkeyKey: Symbol("Valkey"),
 }));
 
-vi.mock("../platform/server/register.ts", () => ({
+vi.mock("../infrastructure/server/register.ts", () => ({
   ApplicationKey: Symbol.for("Application"),
   register: vi.fn(),
 }));
 
-vi.mock("../platform/server/index.ts", () => ({
+vi.mock("../infrastructure/server/index.ts", () => ({
   ApplicationKey: Symbol.for("Application"),
 }));
 
@@ -93,15 +93,15 @@ beforeEach(async () => {
   fakeApp.stop.mockReset().mockResolvedValue(undefined);
   fakeApp.start.mockClear();
 
-  const serverMod = await import("../platform/server/register.ts");
+  const serverMod = await import("../infrastructure/server/register.ts");
   (serverMod.register as unknown as ReturnType<typeof vi.fn>).mockImplementation(
     (c: { registerValue: (k: symbol, v: unknown) => void }) => {
       c.registerValue(serverMod.ApplicationKey, fakeApp);
     },
   );
 
-  const telemetryMod = await import("../platform/telemetry/register.ts");
-  const { LoggerKey } = await import("../platform/telemetry/index.ts");
+  const telemetryMod = await import("../infrastructure/telemetry/register.ts");
+  const { LoggerKey } = await import("../infrastructure/telemetry/index.ts");
   (telemetryMod.register as unknown as ReturnType<typeof vi.fn>).mockImplementation(
     async (c: { registerValue: (k: symbol, v: unknown) => void }) => {
       c.registerValue(LoggerKey, fakeLogger);
