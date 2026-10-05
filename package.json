@@ -19,7 +19,7 @@
     "test:integration": "vitest run --project integration",
     "test:e2e": "vitest run --project e2e",
     "test:coverage": "vitest run --project unit --coverage",
-    "migrate:generate": "drizzle-kit generate",
+    "migrate:generate": "drizzle-kit generate --schema=./src/features/$FEATURE/repository/postgres/schema.ts --out=./src/features/$FEATURE/repository/postgres/migrations",
     "migrate:up": "bun run src/migrate.ts up",
     "migrate:down": "bun run src/migrate.ts down",
     "migrate:status": "bun run src/migrate.ts status",

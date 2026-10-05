@@ -1,266 +1,258 @@
 # zercle-bun-template
 
-A Bun + Hono + TypeScript backend service template with a clean (DDD) architecture, DI-container-based wiring, Postgres (Drizzle ORM), Valkey (Redis-compatible) caching, OpenTelemetry traces, Prometheus metrics, and a Docker Compose stack including an optional observability profile.
-
-## Features
-
-- Bun runtime, Hono 4 HTTP framework
-- Clean (DDD) architecture: feature slices over `contract` / `domain` / `port` / `application` / `adapter`, with the dependency rule enforced by an executable architecture test (`src/architecture.test.ts`)
-- Exposed inbound type contract: wire schemas and error codes re-exported from the package entry (`src/index.ts`) for downstream consumers
-- Composition root in `src/main.ts` -> `src/app/app.ts`, with SIGTERM/SIGINT graceful shutdown
-- Postgres via `pg` and Drizzle ORM 0.45 (`drizzle-kit` migrations)
-- Valkey (Redis-compatible) via `ioredis`
-- Zod 4 request/response validation
-- Pino structured logging (JSON or pretty)
-- OpenTelemetry SDK with OTLP HTTP trace exporter and HTTP instrumentation
-- Prometheus metrics via `prom-client`
-- Liveness and readiness probes backed by a pluggable health registry
-- Vitest 4 with `unit`, `integration`, and `e2e` projects, v8 coverage
-- Biome 2 for lint and format
-- Containerfile + multi-service `compose.yml` with an `observability` profile (OTel Collector, Prometheus, Grafana)
-- Type-safe RPC client via `hono/client` and the exported `AppType`
+Opinionated Bun + Hono + TypeScript HTTP service template: clean (DDD) architecture, an eager-singleton DI container, OpenTelemetry tracing, Prometheus metrics, PostgreSQL via Drizzle, and a Valkey cache-aside example — with four layered features (catalog, machines, sales, reporting) forming a small distributed-vending-machines demo to copy or delete.
 
 ## Prerequisites
 
-- Bun >= 1.3.0 (the project pins `bun@1.3.2` via `packageManager`)
-- Docker and Docker Compose (optional; only needed for Postgres/Valkey via containers or the observability stack)
+- Bun 1.4+
+- Docker/Podman
+- PostgreSQL 18+ (via container)
+- Valkey 9+ (via container)
 
 ## Quick start
 
 ```bash
-# 1. Copy environment defaults
 cp .env.example .env
-
-# 2. Install dependencies
-bun install
-
-# 3. Start Postgres and Valkey via Compose
 docker compose up -d postgres valkey
-
-# 4. Apply database migrations
+bun install
 bun run migrate:up
-
-# 5. Start the server in watch mode
 bun run dev
 ```
 
-The server listens on `http://0.0.0.0:8080` by default (configured under `http.host` / `http.port` in `config.yaml`, overridable with `HTTP_HOST` / `HTTP_PORT`).
+The server listens on `0.0.0.0:8080` (configured under `http.host` / `http.port` in `config.yaml`, overridable with `HTTP_HOST` / `HTTP_PORT`). Health probes: `/healthz`, `/readyz`, `/metrics`.
 
-## Project structure
+## Directory tree
 
-Clean architecture with dependencies pointing inward: `adapter/in` → `application` → `port` + `domain`; `adapter/out` satisfies ports; `platform` is feature-agnostic. The rules are executable — `src/architecture.test.ts` fails the unit suite on any violation.
-
-```text
-src/
-  main.ts                Composition root entry point
-  index.ts               Published inbound contract facade (wire types, error codes, AppType)
-  architecture.test.ts   Executable dependency-rule gates
-  app/                   Application wiring (container, build, run)
-  config/                YAML + env-var configuration loader
-  features/              Feature slices
-    example/             STUB feature demonstrating the pattern; delete to start
-      contract/          Inbound wire types (zod schemas) — the dependency-free leaf
-      domain/            Entities + domain logic + sentinel errors
-      port/              Outbound (driven) port interfaces
-      application/       Inbound port interface + use-case orchestration
-      adapter/
-        in/http/         Driving adapter: HTTP handler
-        out/postgres/    Driven adapter: Drizzle repository + table schema
-      di.ts              Feature composition (wires adapters to ports)
-  platform/              Cross-cutting, feature-agnostic infrastructure
-    server/              Hono app + Application lifecycle
-    middleware/          requestId, recover, otel, accessLog, cors, bodyLimit
-    telemetry/           logger, tracer, meter, health registry
-    errors/              error codes, AppError, sentinels, HTTP error mapper
-    db/                  Connection-level Drizzle/postgres wiring (schema-free)
-    messaging/           Valkey (ioredis) wiring
-  migrate.ts             Migration CLI (up / down / status)
+```
+zercle-bun-template/
+├── .github/
+│   ├── dependabot.yml
+│   └── workflows/              # ci.yml (lint/unit/integration/build), cd.yml, security.yml
+├── deployments/
+│   ├── kustomize/
+│   │   ├── base/               # deployment, service, configmap, secret, kustomization
+│   │   └── overlays/development/
+│   └── observability/          # otel-collector-config.yaml, prometheus.yml
+├── src/
+│   ├── main.ts                 # entry point: loads config, delegates to src/app
+│   ├── index.ts                # published inbound contract facade (outward-only)
+│   ├── migrate.ts              # self-contained migration runner (up / down / status)
+│   ├── architecture.test.ts    # executable dependency gates (runs in bun run test)
+│   ├── app/                    # reusable composition root (Container, build, run)
+│   ├── features/
+│   │   ├── features.ts         # feature registry: the single enumeration point
+│   │   ├── catalog/            # global product pool (price + stock)
+│   │   ├── machines/           # vending machines + their coin banks
+│   │   ├── sales/              # purchases: price a sale, compose change, commit
+│   │   └── reporting/          # read-only cross-feature GET /api/v1/reports/summary (no migrations)
+│   │       # catalog, machines, sales, and reporting each repeat the same
+│   │       # layer layout below (reporting owns no migrations):
+│   │       ├── contract/       # canonical inbound wire types (zod) — dependency-free leaf
+│   │       ├── domain/         # entities + sentinel errors
+│   │       ├── usecase/        # inbound service interface + use-case orchestration
+│   │       ├── repository/     # outbound (driven) interface
+│   │       │   └── postgres/   # Drizzle repository + schema + cache-aside + migrations
+│   │       ├── handler/        # driving adapter: Hono handler
+│   │       └── di.ts           # feature wiring
+│   ├── infrastructure/         # cross-cutting, feature-agnostic infrastructure
+│   │   ├── config/             # YAML + env-var configuration loader
+│   │   ├── server/             # Hono app + Application lifecycle
+│   │   ├── middleware/         # requestId, otel, accessLog, recover, cors, bodyLimit
+│   │   ├── telemetry/          # logger, tracer, meter, health registry
+│   │   ├── errors/             # error codes, AppError, sentinels, HTTP mapper
+│   │   ├── db/                 # connection-level Drizzle/postgres wiring (schema-free)
+│   │   └── messaging/          # Valkey (ioredis) + cache-aside
+│   └── testutil/               # shared test helpers + fixtures
+├── test/
+│   └── e2e/                    # end-to-end tests (bun run test:e2e)
+├── .editorconfig
+├── .env.example
+├── .gitattributes
+├── compose.yml                 # postgres + valkey + migrate + server
+├── config.yaml
+├── Containerfile
+├── Containerfile.migrate
+├── drizzle.config.ts
+├── LICENSE
+├── package.json
+├── README.md
+└── tsconfig.json
 ```
 
-Dependency rules enforced by `src/architecture.test.ts` (mirroring the Go template's `internal/architecture_test.go`):
+## Architecture overview
 
-1. `domain` depends on nothing
-2. `contract` is a dependency-free leaf (`zod` only) and is published outward only through `src/index.ts`
-3. `port` references only its own feature's `domain`
-4. `application` orchestrates its own feature's `domain`, `port`, and `contract`
-5. `adapter/out` never imports `application` or `adapter/in`
-6. `adapter/in` talks to the application port only — never to `port` or `adapter/out`
-7. `platform` never imports `features`
-8. internal code never imports the `src/index.ts` facade (outward-only)
+The template follows **clean (DDD) architecture** inside each feature, with all dependencies pointing inward:
 
-New features copy the same slice shape; add each feature's `adapter/out/postgres/schema.ts` to `drizzle.config.ts`.
+```
+consumer services ──> src/index.ts ──> features/*/contract    (published contract, outward-only)
+handler ──> usecase.Service ──> repository.Repository <── repository/postgres
+all layers ──> domain (entities + sentinel errors)
+infrastructure/* ── cross-cutting, never imports features/**
+```
 
-The middleware stack is registered in this fixed order in `src/platform/server/http.ts`:
+- `contract` holds the canonical inbound wire types (zod schemas, no feature imports) — the single source of the API shapes.
+- `domain` holds entities, value objects, and sentinel errors.
+- `usecase` declares the inbound service interface (speaking contract types) and its use-case implementation.
+- `repository` declares the outbound (driven) interface; `repository/postgres` satisfies it with Drizzle over the `postgres` driver and owns the table schema and SQL migrations.
+- `handler` is the driving adapter: the Hono handler parses contract types and delegates to the usecase service.
+- `infrastructure` consolidates cross-cutting concerns: config, db pool, valkey, cache-aside, typed errors, middleware, server, telemetry.
 
-1. `requestId`
-2. `recover`
-3. `otel`
-4. `accessLog`
-5. `cors`
-6. `bodyLimit` (only when `http.body_limit` parses to a positive size)
+**Published inbound contract.** `src/index.ts` is the facade over each feature's `contract` types plus the wire error codes, so another service can construct payloads and interpret the `{"error": code, "message": msg}` envelope without importing server internals. Internal code never imports `src/index.ts`; the dependency is strictly outward-only and enforced by `src/architecture.test.ts`.
 
-## Configuration
+**Executable dependency gates.** `src/architecture.test.ts` scans the import specifiers of every non-test source file under `src/` and fails when a layer reaches sideways or outward. The rules, mirroring the Go template's `internal/architecture_test.go`:
 
-Two equivalent sources are merged at startup, with environment variables taking precedence over YAML:
+| Rule | Governs | Denies |
+|---|---|---|
+| `published-facade-is-outward-only` | every file | importing `src/index.ts` |
+| `domain-is-innermost` | `features/<f>/domain` | any src import or third-party package |
+| `contract-is-leaf` | `features/<f>/contract` | anything but zod |
+| `repository-interface-depends-only-on-domain` | `features/<f>/repository` | imports outside own `domain` and sibling repository modules |
+| `usecase-depends-on-domain-repository-contract` | `features/<f>/usecase` | imports outside own `domain`, top-level `repository`, `contract`, and sibling usecase modules |
+| `repository-impl-ignores-usecase-and-handler` | `features/<f>/repository/postgres` | importing own `usecase` or `handler` |
+| `handler-ignores-repository` | `features/<f>/handler` | importing own `repository` (interface or postgres impl) |
+| `features-registry-imports-only-own-features` | `features/features.ts` | bare packages; relative imports outside `app/container` and `features/**` |
+| `infrastructure-ignores-features` | `infrastructure/**` | importing `features/**` |
 
-- `config.yaml` — default values, organised into sections: `app`, `http`, `db`, `valkey`, `log`, `otel`, `example`.
-- `.env.example` — environment variable names accepted as overrides (`APP_*`, `HTTP_*`, `DB_*`, `VALKEY_*`, `LOG_*`, `OTEL_*`, `EXAMPLE_*`). Copy this file to `.env` and edit as needed.
+It runs as part of `bun run test`.
 
-Durations accept Go-style values such as `15s`, `30m`, `1h`. `http.body_limit` accepts size suffixes such as `1M`.
+Composition uses a small **eager-singleton DI container** (`src/app/container.ts`). `src/app/app.ts` is the reusable composition root that wires the container in dependency order:
 
-## HTTP API
+```
+config → telemetry → db → valkey → server → features
+```
 
-### Observability (mounted on the root app)
+`src/main.ts` is a thin entry point that reads build-time metadata (`APP_VERSION` / `APP_COMMIT_SHA` / `APP_BUILD_TIME`) and calls `run`, which installs SIGTERM/SIGINT handlers and starts `Bun.serve`.
 
-| Method | Path       | Description                                          | Success | Failure |
-| ------ | ---------- | ---------------------------------------------------- | ------- | ------- |
-| GET    | `/healthz` | Liveness probe                                       | 200     | 500     |
-| GET    | `/readyz`  | Readiness probe; runs the health registry            | 200     | 503     |
-| GET    | `/metrics` | Prometheus metrics scrape endpoint                   | 200     | -       |
+The registry is the **single enumeration point**: `features` in `src/features/features.ts` holds one `Feature` (`name`, `register`, `migrationsDir`) per feature, `registerAll` wires the container, and `migrationSources()` feeds the migration runner. Adding or deleting a feature is therefore one entry in that list plus the feature's own directory. That order is also the migration order: `catalog` owns schema version 1, `machines` version 2, `sales` version 3, and `reporting` carries no `migrationsDir` because it owns no schema of its own.
 
-### Example stub feature (mounted at `/api/v1`)
+**Migrations are feature-owned**: each feature's SQL lives in its `repository/postgres/migrations/`, and `src/migrate.ts` merges every registered feature's migrations via `migrationSources()`, so deleting a feature deletes its schema with it. `bun run migrate:up` / `migrate:down` / `migrate:status` drive the self-contained runner (`up` applies every pending migration in one transaction each, `down` steps down exactly one version, `status` prints per-feature applied/pending counts). Version numbers are a **single namespace across all features**, not per feature: the next migration added to any feature takes the next free version. Author one with `FEATURE=<name> bun run migrate:generate`, which runs `drizzle-kit` against that feature's `schema.ts` and writes into its migrations directory; renumber the generated file to the next free global version. `drizzle-kit` only generates `*.up.sql`, so the matching `*.down.sql` files are hand-written, and `down` exits non-zero when one is missing rather than silently diverging.
 
-The `src/features/example` slice is a deliberately minimal CRUD stub that demonstrates the clean-architecture pattern (contract, domain, port, application, adapter, di). **Delete `src/features/example` to start a real project.**
+Configuration is loaded from `config.yaml` and the environment (env wins) into a typed, validated `Config` via Zod. `CATALOG_ENABLED`, `MACHINES_ENABLED`, `SALES_ENABLED`, and `REPORTING_ENABLED` gate each feature: when false its providers, routes, and sentinel mappings are not registered at all. Name/label and page-size limits (`CATALOG_MAX_NAME_LENGTH`, `CATALOG_MAX_PAGE_SIZE`, `MACHINES_MAX_LABEL_LENGTH`, `MACHINES_MAX_PAGE_SIZE`) are enforced in the usecase layer, so a deployment can raise them without touching request validation. The reporting top-machines bounds (`REPORTING_DEFAULT_TOP_MACHINES`, `REPORTING_MAX_TOP_MACHINES`) are enforced the same way. See the [Configuration reference](#configuration-reference).
 
-| Method | Path                   | Description                                          | Success |
-| ------ | ---------------------- | ---------------------------------------------------- | ------- |
-| POST   | `/api/v1/items`        | Create an item; body `{ "name": string }`            | 201     |
-| GET    | `/api/v1/items`        | List items; query `limit`, `offset`                  | 200     |
-| GET    | `/api/v1/items/:id`    | Fetch an item by UUID                                | 200     |
+### Routes
+
+| Method | Path | Feature | Purpose |
+|---|---|---|---|
+| POST | `/api/v1/products` | catalog | add a product to the global pool |
+| GET | `/api/v1/products` | catalog | list products (paginated) |
+| GET | `/api/v1/products/:id` | catalog | fetch one product |
+| POST | `/api/v1/machines` | machines | register a machine with an initial coin bank |
+| GET | `/api/v1/machines` | machines | list machines (paginated) |
+| GET | `/api/v1/machines/:id` | machines | fetch one machine |
+| POST | `/api/v1/machines/:id/bank` | machines | restock a machine's coin bank |
+| POST | `/api/v1/purchases` | sales | buy a product: price, compose change, commit |
+| GET | `/api/v1/reports/summary` | reporting | cross-feature totals + top machines by revenue |
+
+Health and observability endpoints (`/healthz`, `/readyz`, `/metrics`) are served by `src/infrastructure/server`.
+
+**Cross-feature boundaries.** Features never import each other; each owns its domain, contract, and repository interface. `sales` consumes catalog and machines data only through its own `repository.Repository`, whose postgres implementation reads the `catalog_products` and `machines` tables directly and commits the sale in one transaction. This is a deliberate single-database compromise — the tables are shared, but the repository interface is the seam: a future service split replaces that one implementation without touching the sales domain or usecase. Stock is a **global pool** (decrementing a product affects every machine), while per-machine product slots are the documented extension if the demo grows. `reporting` demonstrates the read-only side of the same seam: it aggregates totals across all three features' tables through its own repository interface and owns no schema of its own.
+
+Every HTTP failure — handler errors and framework errors (404/405, body-limit 413) alike — is served in the `{"error": code, "message": msg}` envelope, with codes exported from `src/index.ts`.
+
+## Caching (Valkey cache-aside)
+
+`src/infrastructure/messaging/cache-aside.ts` adds cache-aside reads on top of the Valkey (Redis-compatible) client: `CacheAside.get(key, loader)` runs the loader on a miss while concurrent misses for the same key share one in-flight promise, then stores the result with `SET ... EX ttl`. A loader error propagates to every waiter and is not cached, so the next `get` retries. Invalidation on write is explicit via `del`. The catalog feature's `CachedProductRepository` decorates the Drizzle repository with it, so the usecase layer stays cache-unaware. `VALKEY_TTL` sets the entry lifetime.
 
 ## Type-safe client & published contract
 
-`src/index.ts` is the published inbound contract facade (mirroring the Go template's `pkg/api/v1`): it re-exports the wire request/response schemas, the error codes carried in the `{"error", "message"}` envelope, and the `AppType` of the Hono app with the `/api/v1` routes mounted. Downstream services import from the package entry without touching server internals. Use `AppType` with `hono/client` for a fully typed RPC client. Health and metrics routes are mounted directly on the runtime app and are not part of `AppType`; reach them with plain `fetch`.
+`src/index.ts` re-exports the wire request/response schemas for the demo features, the error codes, and the `AppType` of the Hono app with the `/api/v1` routes mounted. Downstream services import from the package entry without touching server internals, and can drive a fully typed RPC client via `hono/client`. Health and metrics routes are mounted directly on the runtime app and are not part of `AppType`; reach them with plain `fetch`.
 
 ```ts
 import { hc } from "hono/client";
-import { ErrCodeNotFound, type ItemResponse, ListItemsResponse } from "zercle-bun-template";
-import type { AppType } from "zercle-bun-template";
+import { ErrCodeNotFound, type AppType } from "zercle-bun-template";
 
 const client = hc<AppType>("http://localhost:8080");
 
-const res = await client.api.v1.items.$post({ json: { name: "x" } });
-const list = await client.api.v1.items.$get({ query: { limit: 10, offset: 0 } });
-const parsed = ListItemsResponse.safeParse(await list.json());
+// machineId / productId are ids returned by the machines and products calls.
+const res = await client.api.v1.products.$post({
+  json: { name: "cola", price_cents: 75, stock: 10 },
+});
+const list = await client.api.v1.products.$get({ query: { limit: 10, offset: 0 } });
+const purchase = await client.api.v1.purchases.$post({
+  json: { machine_id: machineId, product_id: productId, coins: [100] },
+});
 if (res.status === 404) {
   // body.error === ErrCodeNotFound
 }
 ```
 
+## Adding and deleting features
+
+To add a feature:
+
+1. Copy or author `src/features/<name>/` (the layer layout described above).
+2. Add one entry to `features` in `src/features/features.ts` — `name`, `register`, and `migrationsDir` when it owns schema. Migrations are numbered in one global namespace, so take the next free version across all features.
+3. Register its config in `src/infrastructure/config/config.ts` and add its re-exports in `src/index.ts` before publishing.
+
+To replace the demo features (catalog, machines, sales, reporting):
+
+1. Remove the feature directories under `src/features/` you are replacing.
+2. Remove their entries from `features` in `src/features/features.ts`.
+3. Replace their re-exports in `src/index.ts` with your feature's contract types.
+4. Delete the `catalog:` / `machines:` / `sales:` / `reporting:` blocks from `config.yaml` and the matching `CATALOG_*` / `MACHINES_*` / `SALES_*` / `REPORTING_*` lines from `.env.example`.
+
 ## Scripts
 
-All scripts are defined in `package.json` and run via `bun run <name>` (or `npm run <name>`).
+All scripts are defined in `package.json` and run via `bun run <name>`.
 
-| Script               | Command                                                  | Purpose                                                  |
-| -------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
-| `dev`                | `bun run --watch src/main.ts`                            | Start the server with file watching                      |
-| `start`              | `bun run src/main.ts`                                    | Start the server without watching                        |
-| `typecheck`          | `tsc --noEmit`                                           | Type-check the project                                   |
-| `lint`               | `biome check src test`                                   | Run Biome checks                                         |
-| `lint:fix`           | `biome check --write src test`                           | Apply Biome auto-fixes                                   |
-| `format`             | `biome format --write src test`                          | Format with Biome                                        |
-| `test`               | `vitest run --project unit`                              | Run the unit test project                                |
-| `test:unit`          | `vitest run --project unit`                              | Unit tests only                                          |
-| `test:integration`   | `vitest run --project integration`                      | Integration tests (`*.integration.test.ts`)              |
-| `test:e2e`           | `vitest run --project e2e`                              | End-to-end tests (`test/e2e/**`)                         |
-| `test:coverage`      | `vitest run --project unit --coverage`                   | Unit tests with v8 coverage                              |
-| `migrate:generate`   | `drizzle-kit generate`                                   | Generate a new SQL migration from the Drizzle schema     |
-| `migrate:up`         | `bun run src/migrate.ts up`                              | Apply pending migrations                                 |
-| `migrate:down`       | `bun run src/migrate.ts down`                            | Declared but not implemented by the runner (exits with usage error) |
-| `migrate:status`     | `bun run src/migrate.ts status`                          | Show migration status                                    |
-| `docker:build`       | `docker build -f Containerfile -t zercle-bun-template:latest .` | Build the server container image                  |
-
-## Database migrations
-
-Schema is managed with Drizzle. The configuration lives in `drizzle.config.ts`; generated SQL is written to `migrations/`.
-
-```bash
-# After editing src/features/example/adapter/out/postgres/schema.ts
-bun run migrate:generate
-
-# Apply pending migrations
-bun run migrate:up
-
-# Inspect applied vs pending migrations
-bun run migrate:status
-```
-
-Only `up` and `status` are implemented by `src/migrate.ts`. The `down` subcommand is declared in `package.json` but not implemented — rollback is not currently supported.
-
-The `migrate` service in `compose.yml` runs `migrate up` automatically (via the `Containerfile.migrate` entrypoint, which defaults to `up`) before the `server` service starts.
+| Script | Purpose |
+|---|---|
+| `dev` | Start the server with file watching |
+| `start` | Start the server without watching |
+| `typecheck` | Type-check the project |
+| `lint` / `lint:fix` / `format` | Biome checks / auto-fixes / formatting |
+| `test` / `test:unit` | Unit tests (includes the architecture gates) |
+| `test:integration` | Integration tests (`*.integration.test.ts`) |
+| `test:e2e` | End-to-end tests (`test/e2e/**`) |
+| `test:coverage` | Unit tests with v8 coverage (60% thresholds) |
+| `migrate:up` / `migrate:down` / `migrate:status` | Run the migration runner |
+| `migrate:generate` | Author a migration with drizzle-kit into `FEATURE`'s directory |
+| `docker:build` | Build the server container image |
 
 ## Testing
 
 Vitest is configured with three projects in `vitest.config.ts`:
 
-- `unit` — `src/**/*.test.ts`, environment `node` (also the default for `bun run test`).
-- `integration` — `src/**/*.integration.test.ts`, environment `node`.
-- `e2e` — `test/e2e/**/*.test.ts`, environment `node`.
+- `unit` — `src/**/*.test.ts` (also the default for `bun run test`), including `src/architecture.test.ts`.
+- `integration` — `src/**/*.integration.test.ts`, against live PostgreSQL + Valkey.
+- `e2e` — `test/e2e/**/*.test.ts`, booting the full composition root against live dependencies.
 
-Coverage is provided by `@vitest/coverage-v8` with `text` and `lcov` reporters, scoped to `src/**/*.ts` (excluding `*.test.ts`, `*.integration.test.ts`, and `index.ts` barrels). Coverage thresholds are 60% for lines, functions, branches, and statements.
+Shared integration helpers and fixtures live in `src/testutil/`.
 
 ```bash
-bun run test                # unit tests only
-bun run test:integration
-bun run test:e2e
+bun run test                # unit tests (no external services)
+bun run test:integration    # requires postgres + valkey
+bun run test:e2e            # requires postgres + valkey
 bun run test:coverage       # unit tests + coverage
 ```
 
-## Docker
+## Configuration reference
 
-Build the server image:
+`config.yaml` holds the defaults; `.env.example` lists the environment overrides (env wins over YAML). Durations accept Go-style values such as `15s`, `30m`, `1h`; `http.body_limit` accepts size suffixes such as `1M`.
 
-```bash
-bun run docker:build
-```
+| Section | Env vars |
+|---|---|
+| `app` | `APP_NAME`, `APP_ENVIRONMENT`, `APP_HOST`, `APP_PORT`, `APP_SHUTDOWN_TIMEOUT` |
+| `http` | `HTTP_HOST`, `HTTP_PORT`, `HTTP_READ_TIMEOUT`, `HTTP_WRITE_TIMEOUT`, `HTTP_IDLE_TIMEOUT`, `HTTP_BODY_LIMIT`, `HTTP_HEALTH_PROBE_TIMEOUT`, `HTTP_CORS_ALLOW_ORIGINS`, `HTTP_CORS_ALLOW_METHODS`, `HTTP_CORS_ALLOW_HEADERS` |
+| `db` | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL_MODE`, `DB_MAX_CONNS`, `DB_MIN_CONNS`, `DB_MAX_CONN_IDLE`, `DB_MAX_CONN_LIFE`, `DB_CONNECT_TIMEOUT` |
+| `valkey` | `VALKEY_HOST`, `VALKEY_PORT`, `VALKEY_PASSWORD`, `VALKEY_DB`, `VALKEY_CONNECT_TIMEOUT`, `VALKEY_TTL` |
+| `otel` | `OTEL_EXPORTER`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `OTEL_TRACES_SAMPLER_ARG` |
+| `log` | `LOG_LEVEL`, `LOG_FORMAT` |
+| `catalog` | `CATALOG_ENABLED`, `CATALOG_DEFAULT_PAGE_SIZE`, `CATALOG_MAX_PAGE_SIZE`, `CATALOG_MAX_NAME_LENGTH` |
+| `machines` | `MACHINES_ENABLED`, `MACHINES_DEFAULT_PAGE_SIZE`, `MACHINES_MAX_PAGE_SIZE`, `MACHINES_MAX_LABEL_LENGTH` |
+| `sales` | `SALES_ENABLED` |
+| `reporting` | `REPORTING_ENABLED`, `REPORTING_DEFAULT_TOP_MACHINES`, `REPORTING_MAX_TOP_MACHINES` |
 
-Or start the full stack (Postgres, Valkey, migrate, server):
+`OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_TRACES_SAMPLER_ARG` map to `otel.endpoint` and `otel.sampling` respectively; the endpoint is required when `OTEL_EXPORTER=otlp`.
 
-```bash
-docker compose up -d
-```
+## Deployment
 
-The compose file declares these services:
-
-- `postgres` (`postgres:18-alpine`) — port `5432`, named volume `postgres_data`
-- `valkey` (`valkey:9-alpine`) — port `6379`, named volume `valkey_data`
-- `migrate` — built from `Containerfile.migrate`, waits for Postgres to be healthy
-- `server` — built from `Containerfile`, port `8080`, waits for Postgres and Valkey to be healthy and for `migrate` to complete successfully
-
-All services share the `zercle-template` bridge network.
-
-### Observability profile
-
-Bring up the OTel Collector, Prometheus, and Grafana alongside the core stack:
-
-```bash
-docker compose --profile observability up
-```
-
-This adds:
-
-- `otel-collector` (`otel/opentelemetry-collector-contrib:0.114.0`) — ports `4317` (OTLP gRPC), `4318` (OTLP HTTP), `8888`, `8889`
-- `prometheus` (`prom/prometheus:v3.0.1`) — port `9090`, named volume `prometheus_data`
-- `grafana` (`grafana/grafana:11.4.0`) — port `3000`, default credentials `admin` / `admin`, named volume `grafana_data`
-
-Prometheus and Grafana configuration files are mounted from `deployments/observability/`.
-
-## Observability
-
-- **Traces** — OpenTelemetry SDK with the OTLP HTTP exporter. Configure the endpoint via `OTEL_EXPORTER_OTLP_ENDPOINT` (default `http://localhost:4318`). Set `OTEL_EXPORTER=none` to disable export entirely.
-- **Metrics** — `prom-client` registry exposed at `GET /metrics`.
-- **Logs** — Pino structured logs. `LOG_LEVEL` (`debug` / `info` / `warn` / `error`) and `LOG_FORMAT` (`json` / `pretty`).
-- **Probes** — `GET /healthz` runs the liveness checks, `GET /readyz` runs the readiness checks; both are bounded by `HTTP_HEALTH_PROBE_TIMEOUT`.
-
-## CI/CD
-
-GitHub Actions workflows live in `.github/workflows/` (mirroring the Go template's setup):
-
-- **`ci.yml`** — on push/PR to `main`/`develop`: lint + typecheck, unit tests with coverage (60% thresholds enforced by vitest, report uploaded to Codecov and as an artifact), integration tests against service containers (Postgres + Valkey, migrations applied first), and a docker build of both images.
-- **`cd.yml`** — on a `v*` tag push: builds multi-arch (`amd64`/`arm64`) server and migrate images and pushes them to `ghcr.io` (`:latest`, `:tag`, and `git describe` versions). Build metadata (`APP_VERSION`, `APP_COMMIT_SHA`, `APP_BUILD_TIME`) is stamped via `Containerfile` build args and printed by the server at startup.
-- **`security.yml`** — weekly (Monday 06:00 UTC) or manual: Trivy filesystem scan uploaded to the GitHub Security tab, plus `bun audit --audit-level=low` against the committed lockfile.
-
-Known-vulnerable transitive versions are pinned to patched releases via the `overrides` field in `package.json`; `dependabot.yml` keeps GitHub Actions, npm packages, and docker images current.
+- `Containerfile` builds a multi-stage distroless/non-root server image (`bun build --compile`, no `node_modules` in the final layer).
+- `compose.yml` runs postgres, valkey, migrate, and server locally; the `observability` profile adds OTel Collector, Prometheus, and Grafana (`docker compose --profile observability up`).
+- `Containerfile.migrate` builds the migration image the `migrate` service runs before `server` starts.
+- `.github/workflows/cd.yml` publishes multi-arch (`amd64`/`arm64`) server and migrate images to ghcr.io on a `v*` tag.
+- Kustomize manifests live under `deployments/kustomize/` (a `base` plus a `development` overlay); observability config is under `deployments/observability/`.
+- Release automation beyond `cd.yml` is intentionally omitted; add it per project.
 
 ## License
 

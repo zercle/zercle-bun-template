@@ -35,3 +35,9 @@ coverage/
 # OS
 .DS_Store
 Thumbs.db
+# agent worktrees
+.worktrees/
+
+# drizzle-kit staging output (real migrations live per feature under
+# src/features/*/repository/postgres/migrations)
+migrations/
