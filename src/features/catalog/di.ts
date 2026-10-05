@@ -1,28 +1,27 @@
 /**
- * Feature composition: registers sentinels, builds the driven adapter
- * (postgres repository, optionally wrapped in cache-aside), the application
- * use case, and the driving HTTP adapter, then mounts the router on the
- * platform Hono app.
+ * Feature composition: registers sentinels, builds the postgres repository
+ * implementation (optionally wrapped in cache-aside), the usecase, and the
+ * HTTP handler, then mounts the router on the infrastructure Hono app.
  */
 import type { Hono } from "hono";
 import type { Container } from "../../app/container.ts";
-import { type Config, ConfigKey } from "../../config/config.ts";
-import { type DBHandle, DBKey } from "../../platform/db/index.ts";
-import { ErrInvalidInput, ErrNotFound } from "../../platform/errors/app-error.ts";
-import { registerSentinel } from "../../platform/errors/sentinel.ts";
-import { type CacheAside, CacheAsideKey } from "../../platform/messaging/cache-aside.ts";
-import { AppKey } from "../../platform/server/index.ts";
-import { createCatalogRouter } from "./adapter/in/http/handler.ts";
-import { CachedProductRepository } from "./adapter/out/postgres/cached-repository.ts";
-import { DrizzleProductRepository } from "./adapter/out/postgres/repository.ts";
-import type { ProductService } from "./application/service.ts";
-import { ProductUsecase } from "./application/usecase.ts";
+import { type Config, ConfigKey } from "../../infrastructure/config/config.ts";
+import { type DBHandle, DBKey } from "../../infrastructure/db/index.ts";
+import { ErrInvalidInput, ErrNotFound } from "../../infrastructure/errors/app-error.ts";
+import { registerSentinel } from "../../infrastructure/errors/sentinel.ts";
+import { type CacheAside, CacheAsideKey } from "../../infrastructure/messaging/cache-aside.ts";
+import { AppKey } from "../../infrastructure/server/index.ts";
 import {
   ErrInvalidID,
   ErrInvalidPrice,
   ErrInvalidProductName,
   ErrProductNotFound,
 } from "./domain/errors.ts";
+import { createCatalogRouter } from "./handler/handler.ts";
+import { CachedProductRepository } from "./repository/postgres/cached-repository.ts";
+import { DrizzleProductRepository } from "./repository/postgres/repository.ts";
+import type { ProductService } from "./usecase/service.ts";
+import { ProductUsecase } from "./usecase/usecase.ts";
 
 export const CatalogRouterKey = Symbol("CatalogRouter");
 

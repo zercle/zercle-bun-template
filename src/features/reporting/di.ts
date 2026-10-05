@@ -1,21 +1,21 @@
 /**
- * Feature composition: registers sentinels, builds the driven adapter
- * (postgres repository), the application use case, and the driving HTTP
- * adapter, then mounts the router on the platform Hono app. The reporting
+ * Feature composition: registers sentinels, builds the postgres repository
+ * implementation, the usecase, and the HTTP handler, then mounts the router on
+ * the infrastructure Hono app. The reporting
  * feature owns no schema, so it contributes no migrations.
  */
 import type { Hono } from "hono";
 import type { Container } from "../../app/container.ts";
-import { type Config, ConfigKey } from "../../config/config.ts";
-import { type DBHandle, DBKey } from "../../platform/db/index.ts";
-import { ErrInvalidInput } from "../../platform/errors/app-error.ts";
-import { registerSentinel } from "../../platform/errors/sentinel.ts";
-import { AppKey } from "../../platform/server/index.ts";
-import { createReportingRouter } from "./adapter/in/http/handler.ts";
-import { DrizzleReportingRepository } from "./adapter/out/postgres/repository.ts";
-import type { ReportingService } from "./application/service.ts";
-import { ReportingUsecase } from "./application/usecase.ts";
+import { type Config, ConfigKey } from "../../infrastructure/config/config.ts";
+import { type DBHandle, DBKey } from "../../infrastructure/db/index.ts";
+import { ErrInvalidInput } from "../../infrastructure/errors/app-error.ts";
+import { registerSentinel } from "../../infrastructure/errors/sentinel.ts";
+import { AppKey } from "../../infrastructure/server/index.ts";
 import { ErrInvalidTopMachines } from "./domain/errors.ts";
+import { createReportingRouter } from "./handler/handler.ts";
+import { DrizzleReportingRepository } from "./repository/postgres/repository.ts";
+import type { ReportingService } from "./usecase/service.ts";
+import { ReportingUsecase } from "./usecase/usecase.ts";
 
 export const ReportingRouterKey = Symbol("ReportingRouter");
 

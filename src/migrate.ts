@@ -3,7 +3,7 @@
  * `cmd/migrate/main.go` plus its `internal/fsmerge` composition.
  *
  * Each feature owns its SQL migrations under
- * `src/features/<name>/adapter/out/postgres/migrations`, and this runner merges
+ * `src/features/<name>/repository/postgres/migrations`, and this runner merges
  * them into a single global version namespace at run time by asking the feature
  * registry for its `migrationSources()`. There is no embedded filesystem and no
  * external migrator library: dropping a feature from the registry drops its
@@ -25,8 +25,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import postgres from "postgres";
-import { dbConnString, loadConfig } from "./config/config.ts";
 import { migrationSources } from "./features/features.ts";
+import { dbConnString, loadConfig } from "./infrastructure/config/config.ts";
 
 type Sql = ReturnType<typeof postgres>;
 

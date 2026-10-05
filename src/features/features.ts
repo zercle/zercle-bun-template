@@ -29,17 +29,17 @@ export const features: readonly Feature[] = [
   {
     name: "catalog",
     register: catalog.register,
-    migrationsDir: "src/features/catalog/adapter/out/postgres/migrations",
+    migrationsDir: "src/features/catalog/repository/postgres/migrations",
   },
   {
     name: "machines",
     register: machines.register,
-    migrationsDir: "src/features/machines/adapter/out/postgres/migrations",
+    migrationsDir: "src/features/machines/repository/postgres/migrations",
   },
   {
     name: "sales",
     register: sales.register,
-    migrationsDir: "src/features/sales/adapter/out/postgres/migrations",
+    migrationsDir: "src/features/sales/repository/postgres/migrations",
   },
   {
     name: "reporting",

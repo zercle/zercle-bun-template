@@ -55,7 +55,7 @@ describe("feature registry", () => {
     expect(withSchema.map((f) => f.name)).toEqual(["catalog", "machines", "sales"]);
     for (const feature of withSchema) {
       expect(feature.migrationsDir).toBe(
-        `src/features/${feature.name}/adapter/out/postgres/migrations`,
+        `src/features/${feature.name}/repository/postgres/migrations`,
       );
     }
   });
@@ -67,9 +67,9 @@ describe("feature registry", () => {
 
   it("returns migration sources in registry order", () => {
     expect(migrationSources()).toEqual([
-      { feature: "catalog", dir: "src/features/catalog/adapter/out/postgres/migrations" },
-      { feature: "machines", dir: "src/features/machines/adapter/out/postgres/migrations" },
-      { feature: "sales", dir: "src/features/sales/adapter/out/postgres/migrations" },
+      { feature: "catalog", dir: "src/features/catalog/repository/postgres/migrations" },
+      { feature: "machines", dir: "src/features/machines/repository/postgres/migrations" },
+      { feature: "sales", dir: "src/features/sales/repository/postgres/migrations" },
     ]);
   });
 });

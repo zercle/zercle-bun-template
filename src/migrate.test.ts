@@ -53,7 +53,7 @@ vi.mock("postgres", () => ({
   default: () => sql,
 }));
 
-vi.mock("./config/config.ts", () => ({
+vi.mock("./infrastructure/config/config.ts", () => ({
   loadConfig: vi.fn(() => ({ db: { host: "x" } })),
   dbConnString: () => "postgres://x",
 }));
@@ -104,7 +104,7 @@ describe("runMigrate usage", () => {
   });
 
   it("returns 1 when loadConfig throws", async () => {
-    const cfg = await import("./config/config.ts");
+    const cfg = await import("./infrastructure/config/config.ts");
     (cfg.loadConfig as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(() => {
       throw new Error("bad config");
     });

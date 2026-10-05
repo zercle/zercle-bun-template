@@ -26,17 +26,17 @@
  * types. Do NOT call methods on the stubs at runtime.
  *
  * Health/liveness/metrics routes (`/healthz`, `/readyz`, `/metrics`) are
- * mounted directly on the runtime app in `src/platform/server/http.ts` and
+ * mounted directly on the runtime app in `src/infrastructure/server/http.ts` and
  * are not included in `AppType`. Clients that need to hit them can call
  * `fetch(base + "/healthz")` directly.
  */
 import { Hono } from "hono";
-import { createCatalogRouter } from "./features/catalog/adapter/in/http/handler.ts";
-import type { ProductService } from "./features/catalog/application/service.ts";
-import { createMachinesRouter } from "./features/machines/adapter/in/http/handler.ts";
-import type { MachineService } from "./features/machines/application/service.ts";
-import { createSalesRouter } from "./features/sales/adapter/in/http/handler.ts";
-import type { SalesService } from "./features/sales/application/service.ts";
+import { createCatalogRouter } from "./features/catalog/handler/handler.ts";
+import type { ProductService } from "./features/catalog/usecase/service.ts";
+import { createMachinesRouter } from "./features/machines/handler/handler.ts";
+import type { MachineService } from "./features/machines/usecase/service.ts";
+import { createSalesRouter } from "./features/sales/handler/handler.ts";
+import type { SalesService } from "./features/sales/usecase/service.ts";
 
 // --- Catalog feature wire contract (v1) -------------------------------------
 
@@ -76,7 +76,7 @@ export {
   ErrCodeInvalidInput,
   ErrCodeNotFound,
   ErrCodeUnauthorized,
-} from "./platform/errors/errcodes.ts";
+} from "./infrastructure/errors/errcodes.ts";
 
 // --- Type-safe RPC surface ---------------------------------------------------
 

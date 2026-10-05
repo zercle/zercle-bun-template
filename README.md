@@ -1,6 +1,6 @@
 # zercle-bun-template
 
-Opinionated Bun + Hono + TypeScript HTTP service template: clean (DDD) architecture, an eager-singleton DI container, OpenTelemetry tracing, Prometheus metrics, PostgreSQL via Drizzle, and a Valkey cache-aside example — with three layered features (catalog, machines, sales) forming a small distributed-vending-machines demo to copy or delete.
+Opinionated Bun + Hono + TypeScript HTTP service template: clean (DDD) architecture, an eager-singleton DI container, OpenTelemetry tracing, Prometheus metrics, PostgreSQL via Drizzle, and a Valkey cache-aside example — with four layered features (catalog, machines, sales, reporting) forming a small distributed-vending-machines demo to copy or delete.
 
 ## Prerequisites
 
@@ -39,32 +39,35 @@ zercle-bun-template/
 │   ├── migrate.ts              # self-contained migration runner (up / down / status)
 │   ├── architecture.test.ts    # executable dependency gates (runs in bun run test)
 │   ├── app/                    # reusable composition root (Container, build, run)
-│   ├── config/                 # YAML + env-var configuration loader
 │   ├── features/
 │   │   ├── features.ts         # feature registry: the single enumeration point
 │   │   ├── catalog/            # global product pool (price + stock)
 │   │   ├── machines/           # vending machines + their coin banks
-│   │   └── sales/              # purchases: price a sale, compose change, commit
-│   │       # catalog, machines, and sales each repeat the same slice layout below:
+│   │   ├── sales/              # purchases: price a sale, compose change, commit
+│   │   └── reporting/          # read-only cross-feature GET /api/v1/reports/summary (no migrations)
+│   │       # catalog, machines, sales, and reporting each repeat the same
+│   │       # layer layout below (reporting owns no migrations):
 │   │       ├── contract/       # canonical inbound wire types (zod) — dependency-free leaf
 │   │       ├── domain/         # entities + sentinel errors
-│   │       ├── port/           # outbound (driven) interface
-│   │       ├── application/    # inbound port interface + use-case orchestration
-│   │       ├── adapter/
-│   │       │   ├── in/http/    # driving adapter: Hono handler
-│   │       │   └── out/postgres/  # driven adapter: Drizzle repository + schema + migrations
+│   │       ├── usecase/        # inbound service interface + use-case orchestration
+│   │       ├── repository/     # outbound (driven) interface
+│   │       │   └── postgres/   # Drizzle repository + schema + cache-aside + migrations
+│   │       ├── handler/        # driving adapter: Hono handler
 │   │       └── di.ts           # feature wiring
-│   └── platform/               # cross-cutting, feature-agnostic infrastructure
-│       ├── server/             # Hono app + Application lifecycle
-│       ├── middleware/         # requestId, otel, accessLog, recover, cors, bodyLimit
-│       ├── telemetry/          # logger, tracer, meter, health registry
-│       ├── errors/             # error codes, AppError, sentinels, HTTP mapper
-│       ├── db/                 # connection-level Drizzle/postgres wiring (schema-free)
-│       └── messaging/          # Valkey (ioredis) + cache-aside
+│   ├── infrastructure/         # cross-cutting, feature-agnostic infrastructure
+│   │   ├── config/             # YAML + env-var configuration loader
+│   │   ├── server/             # Hono app + Application lifecycle
+│   │   ├── middleware/         # requestId, otel, accessLog, recover, cors, bodyLimit
+│   │   ├── telemetry/          # logger, tracer, meter, health registry
+│   │   ├── errors/             # error codes, AppError, sentinels, HTTP mapper
+│   │   ├── db/                 # connection-level Drizzle/postgres wiring (schema-free)
+│   │   └── messaging/          # Valkey (ioredis) + cache-aside
+│   └── testutil/               # shared test helpers + fixtures
 ├── test/
 │   └── e2e/                    # end-to-end tests (bun run test:e2e)
 ├── .editorconfig
 ├── .env.example
+├── .gitattributes
 ├── compose.yml                 # postgres + valkey + migrate + server
 ├── config.yaml
 ├── Containerfile
@@ -82,21 +85,35 @@ The template follows **clean (DDD) architecture** inside each feature, with all 
 
 ```
 consumer services ──> src/index.ts ──> features/*/contract    (published contract, outward-only)
-adapter/in ──> application.Service ──> port.Repository <── adapter/out/postgres
+handler ──> usecase.Service ──> repository.Repository <── repository/postgres
 all layers ──> domain (entities + sentinel errors)
-platform/* ── cross-cutting, never imports features/**
+infrastructure/* ── cross-cutting, never imports features/**
 ```
 
 - `contract` holds the canonical inbound wire types (zod schemas, no feature imports) — the single source of the API shapes.
 - `domain` holds entities, value objects, and sentinel errors.
-- `port` declares the outbound (driven) interface; `adapter/out/postgres` satisfies it with Drizzle over the `postgres` driver and owns the table schema and SQL migrations.
-- `application` declares the inbound service interface (speaking contract types) and its use-case implementation.
-- `adapter/in/http` is the driving adapter: the Hono handler parses contract types and delegates to the application service.
-- `platform` consolidates cross-cutting concerns: config, db pool, valkey, cache-aside, typed errors, middleware, server, telemetry.
+- `usecase` declares the inbound service interface (speaking contract types) and its use-case implementation.
+- `repository` declares the outbound (driven) interface; `repository/postgres` satisfies it with Drizzle over the `postgres` driver and owns the table schema and SQL migrations.
+- `handler` is the driving adapter: the Hono handler parses contract types and delegates to the usecase service.
+- `infrastructure` consolidates cross-cutting concerns: config, db pool, valkey, cache-aside, typed errors, middleware, server, telemetry.
 
 **Published inbound contract.** `src/index.ts` is the facade over each feature's `contract` types plus the wire error codes, so another service can construct payloads and interpret the `{"error": code, "message": msg}` envelope without importing server internals. Internal code never imports `src/index.ts`; the dependency is strictly outward-only and enforced by `src/architecture.test.ts`.
 
-**Executable dependency gates.** `src/architecture.test.ts` scans the import specifiers of every non-test source file under `src/` and fails when a layer reaches sideways or outward: facade outward-only, domain purity, contract leaf purity, the port and application allowlists, adapter separation, and platform's feature-agnosticism. It runs as part of `bun run test`.
+**Executable dependency gates.** `src/architecture.test.ts` scans the import specifiers of every non-test source file under `src/` and fails when a layer reaches sideways or outward. The rules, mirroring the Go template's `internal/architecture_test.go`:
+
+| Rule | Governs | Denies |
+|---|---|---|
+| `published-facade-is-outward-only` | every file | importing `src/index.ts` |
+| `domain-is-innermost` | `features/<f>/domain` | any src import or third-party package |
+| `contract-is-leaf` | `features/<f>/contract` | anything but zod |
+| `repository-interface-depends-only-on-domain` | `features/<f>/repository` | imports outside own `domain` and sibling repository modules |
+| `usecase-depends-on-domain-repository-contract` | `features/<f>/usecase` | imports outside own `domain`, top-level `repository`, `contract`, and sibling usecase modules |
+| `repository-impl-ignores-usecase-and-handler` | `features/<f>/repository/postgres` | importing own `usecase` or `handler` |
+| `handler-ignores-repository` | `features/<f>/handler` | importing own `repository` (interface or postgres impl) |
+| `features-registry-imports-only-own-features` | `features/features.ts` | bare packages; relative imports outside `app/container` and `features/**` |
+| `infrastructure-ignores-features` | `infrastructure/**` | importing `features/**` |
+
+It runs as part of `bun run test`.
 
 Composition uses a small **eager-singleton DI container** (`src/app/container.ts`). `src/app/app.ts` is the reusable composition root that wires the container in dependency order:
 
@@ -106,11 +123,11 @@ config → telemetry → db → valkey → server → features
 
 `src/main.ts` is a thin entry point that reads build-time metadata (`APP_VERSION` / `APP_COMMIT_SHA` / `APP_BUILD_TIME`) and calls `run`, which installs SIGTERM/SIGINT handlers and starts `Bun.serve`.
 
-The registry is the **single enumeration point**: `features` in `src/features/features.ts` holds one `Feature` (`name`, `register`, `migrationsDir`) per feature, `registerAll` wires the container, and `migrationSources()` feeds the migration runner. Adding or deleting a feature is therefore one entry in that list plus the feature's own directory. That order is also the migration order: `catalog` owns schema version 1, `machines` version 2, `sales` version 3.
+The registry is the **single enumeration point**: `features` in `src/features/features.ts` holds one `Feature` (`name`, `register`, `migrationsDir`) per feature, `registerAll` wires the container, and `migrationSources()` feeds the migration runner. Adding or deleting a feature is therefore one entry in that list plus the feature's own directory. That order is also the migration order: `catalog` owns schema version 1, `machines` version 2, `sales` version 3, and `reporting` carries no `migrationsDir` because it owns no schema of its own.
 
-**Migrations are feature-owned**: each feature's SQL lives in its `adapter/out/postgres/migrations/`, and `src/migrate.ts` merges every registered feature's migrations via `migrationSources()`, so deleting a feature deletes its schema with it. `bun run migrate:up` / `migrate:down` / `migrate:status` drive the self-contained runner (`up` applies every pending migration in one transaction each, `down` steps down exactly one version, `status` prints per-feature applied/pending counts). Version numbers are a **single namespace across all features**, not per feature: the next migration added to any feature takes the next free version. Author one with `FEATURE=<name> bun run migrate:generate`, which runs `drizzle-kit` against that feature's `schema.ts` and writes into its migrations directory; renumber the generated file to the next free global version. `drizzle-kit` only generates `*.up.sql`, so the matching `*.down.sql` files are hand-written, and `down` exits non-zero when one is missing rather than silently diverging.
+**Migrations are feature-owned**: each feature's SQL lives in its `repository/postgres/migrations/`, and `src/migrate.ts` merges every registered feature's migrations via `migrationSources()`, so deleting a feature deletes its schema with it. `bun run migrate:up` / `migrate:down` / `migrate:status` drive the self-contained runner (`up` applies every pending migration in one transaction each, `down` steps down exactly one version, `status` prints per-feature applied/pending counts). Version numbers are a **single namespace across all features**, not per feature: the next migration added to any feature takes the next free version. Author one with `FEATURE=<name> bun run migrate:generate`, which runs `drizzle-kit` against that feature's `schema.ts` and writes into its migrations directory; renumber the generated file to the next free global version. `drizzle-kit` only generates `*.up.sql`, so the matching `*.down.sql` files are hand-written, and `down` exits non-zero when one is missing rather than silently diverging.
 
-Configuration is loaded from `config.yaml` and the environment (env wins) into a typed, validated `Config` via Zod. `CATALOG_ENABLED`, `MACHINES_ENABLED`, and `SALES_ENABLED` gate each feature: when false its providers, routes, and sentinel mappings are not registered at all. Name/label and page-size limits (`CATALOG_MAX_NAME_LENGTH`, `CATALOG_MAX_PAGE_SIZE`, `MACHINES_MAX_LABEL_LENGTH`, `MACHINES_MAX_PAGE_SIZE`) are enforced in the application layer, so a deployment can raise them without touching request validation. See the [Configuration reference](#configuration-reference).
+Configuration is loaded from `config.yaml` and the environment (env wins) into a typed, validated `Config` via Zod. `CATALOG_ENABLED`, `MACHINES_ENABLED`, `SALES_ENABLED`, and `REPORTING_ENABLED` gate each feature: when false its providers, routes, and sentinel mappings are not registered at all. Name/label and page-size limits (`CATALOG_MAX_NAME_LENGTH`, `CATALOG_MAX_PAGE_SIZE`, `MACHINES_MAX_LABEL_LENGTH`, `MACHINES_MAX_PAGE_SIZE`) are enforced in the usecase layer, so a deployment can raise them without touching request validation. The reporting top-machines bounds (`REPORTING_DEFAULT_TOP_MACHINES`, `REPORTING_MAX_TOP_MACHINES`) are enforced the same way. See the [Configuration reference](#configuration-reference).
 
 ### Routes
 
@@ -124,20 +141,21 @@ Configuration is loaded from `config.yaml` and the environment (env wins) into a
 | GET | `/api/v1/machines/:id` | machines | fetch one machine |
 | POST | `/api/v1/machines/:id/bank` | machines | restock a machine's coin bank |
 | POST | `/api/v1/purchases` | sales | buy a product: price, compose change, commit |
+| GET | `/api/v1/reports/summary` | reporting | cross-feature totals + top machines by revenue |
 
-Health and observability endpoints (`/healthz`, `/readyz`, `/metrics`) are served by `src/platform/server`.
+Health and observability endpoints (`/healthz`, `/readyz`, `/metrics`) are served by `src/infrastructure/server`.
 
-**Cross-feature boundaries.** Features never import each other; each owns its domain, contract, and repository port. `sales` consumes catalog and machines data only through its own `port.Repository`, whose postgres implementation reads the `catalog_products` and `machines` tables directly and commits the sale in one transaction. This is a deliberate single-database compromise — the tables are shared, but the port is the seam: a future service split replaces that one implementation without touching the sales domain or application layer. Stock is a **global pool** (decrementing a product affects every machine), while per-machine product slots are the documented extension if the demo grows.
+**Cross-feature boundaries.** Features never import each other; each owns its domain, contract, and repository interface. `sales` consumes catalog and machines data only through its own `repository.Repository`, whose postgres implementation reads the `catalog_products` and `machines` tables directly and commits the sale in one transaction. This is a deliberate single-database compromise — the tables are shared, but the repository interface is the seam: a future service split replaces that one implementation without touching the sales domain or usecase. Stock is a **global pool** (decrementing a product affects every machine), while per-machine product slots are the documented extension if the demo grows. `reporting` demonstrates the read-only side of the same seam: it aggregates totals across all three features' tables through its own repository interface and owns no schema of its own.
 
 Every HTTP failure — handler errors and framework errors (404/405, body-limit 413) alike — is served in the `{"error": code, "message": msg}` envelope, with codes exported from `src/index.ts`.
 
 ## Caching (Valkey cache-aside)
 
-`src/platform/messaging/cache-aside.ts` adds cache-aside reads on top of the Valkey (Redis-compatible) client: `CacheAside.get(key, loader)` runs the loader on a miss while concurrent misses for the same key share one in-flight promise, then stores the result with `SET ... EX ttl`. A loader error propagates to every waiter and is not cached, so the next `get` retries. Invalidation on write is explicit via `del`. The catalog feature's `CachedProductRepository` decorates the Drizzle repository with it, so the application layer stays cache-unaware. `VALKEY_TTL` sets the entry lifetime.
+`src/infrastructure/messaging/cache-aside.ts` adds cache-aside reads on top of the Valkey (Redis-compatible) client: `CacheAside.get(key, loader)` runs the loader on a miss while concurrent misses for the same key share one in-flight promise, then stores the result with `SET ... EX ttl`. A loader error propagates to every waiter and is not cached, so the next `get` retries. Invalidation on write is explicit via `del`. The catalog feature's `CachedProductRepository` decorates the Drizzle repository with it, so the usecase layer stays cache-unaware. `VALKEY_TTL` sets the entry lifetime.
 
 ## Type-safe client & published contract
 
-`src/index.ts` re-exports the wire request/response schemas for all three features, the error codes, and the `AppType` of the Hono app with the `/api/v1` routes mounted. Downstream services import from the package entry without touching server internals, and can drive a fully typed RPC client via `hono/client`. Health and metrics routes are mounted directly on the runtime app and are not part of `AppType`; reach them with plain `fetch`.
+`src/index.ts` re-exports the wire request/response schemas for the demo features, the error codes, and the `AppType` of the Hono app with the `/api/v1` routes mounted. Downstream services import from the package entry without touching server internals, and can drive a fully typed RPC client via `hono/client`. Health and metrics routes are mounted directly on the runtime app and are not part of `AppType`; reach them with plain `fetch`.
 
 ```ts
 import { hc } from "hono/client";
@@ -162,16 +180,16 @@ if (res.status === 404) {
 
 To add a feature:
 
-1. Copy or author `src/features/<name>/` (the slice layout described above).
+1. Copy or author `src/features/<name>/` (the layer layout described above).
 2. Add one entry to `features` in `src/features/features.ts` — `name`, `register`, and `migrationsDir` when it owns schema. Migrations are numbered in one global namespace, so take the next free version across all features.
-3. Register its config in `src/config/config.ts` and add its re-exports in `src/index.ts` before publishing.
+3. Register its config in `src/infrastructure/config/config.ts` and add its re-exports in `src/index.ts` before publishing.
 
-To replace the demo features (catalog, machines, sales):
+To replace the demo features (catalog, machines, sales, reporting):
 
 1. Remove the feature directories under `src/features/` you are replacing.
 2. Remove their entries from `features` in `src/features/features.ts`.
 3. Replace their re-exports in `src/index.ts` with your feature's contract types.
-4. Delete the `catalog:` / `machines:` / `sales:` blocks from `config.yaml` and the matching `CATALOG_*` / `MACHINES_*` / `SALES_*` lines from `.env.example`.
+4. Delete the `catalog:` / `machines:` / `sales:` / `reporting:` blocks from `config.yaml` and the matching `CATALOG_*` / `MACHINES_*` / `SALES_*` / `REPORTING_*` lines from `.env.example`.
 
 ## Scripts
 
@@ -199,6 +217,8 @@ Vitest is configured with three projects in `vitest.config.ts`:
 - `integration` — `src/**/*.integration.test.ts`, against live PostgreSQL + Valkey.
 - `e2e` — `test/e2e/**/*.test.ts`, booting the full composition root against live dependencies.
 
+Shared integration helpers and fixtures live in `src/testutil/`.
+
 ```bash
 bun run test                # unit tests (no external services)
 bun run test:integration    # requires postgres + valkey
@@ -221,6 +241,7 @@ bun run test:coverage       # unit tests + coverage
 | `catalog` | `CATALOG_ENABLED`, `CATALOG_DEFAULT_PAGE_SIZE`, `CATALOG_MAX_PAGE_SIZE`, `CATALOG_MAX_NAME_LENGTH` |
 | `machines` | `MACHINES_ENABLED`, `MACHINES_DEFAULT_PAGE_SIZE`, `MACHINES_MAX_PAGE_SIZE`, `MACHINES_MAX_LABEL_LENGTH` |
 | `sales` | `SALES_ENABLED` |
+| `reporting` | `REPORTING_ENABLED`, `REPORTING_DEFAULT_TOP_MACHINES`, `REPORTING_MAX_TOP_MACHINES` |
 
 `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_TRACES_SAMPLER_ARG` map to `otel.endpoint` and `otel.sampling` respectively; the endpoint is required when `OTEL_EXPORTER=otlp`.
 

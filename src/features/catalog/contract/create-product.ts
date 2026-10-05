@@ -10,7 +10,7 @@
 import { z } from "zod";
 
 export const CreateProductRequest = z.object({
-  // No hardcoded max — the application-level `max_name_length` config is the
+  // No hardcoded max — the usecase-level `max_name_length` config is the
   // real authority. The 4096 ceiling is a generous safety guard only.
   name: z.string().min(1).max(4096),
   // Only structural constraints live here; the usecase layer enforces the

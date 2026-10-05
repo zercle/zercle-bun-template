@@ -1,19 +1,19 @@
 /**
- * Feature composition: registers sentinels, builds the driven adapter
- * (postgres repository), the application use case, and the driving HTTP
- * adapter, then mounts the router on the platform Hono app.
+ * Feature composition: registers sentinels, builds the postgres repository
+ * implementation, the usecase, and the HTTP handler, then mounts the router on
+ * the infrastructure Hono app.
  */
 import type { Hono } from "hono";
 import type { Container } from "../../app/container.ts";
-import { type Config, ConfigKey } from "../../config/config.ts";
-import { type DBHandle, DBKey } from "../../platform/db/index.ts";
-import { ErrConflict, ErrInvalidInput, ErrNotFound } from "../../platform/errors/app-error.ts";
-import { registerSentinel } from "../../platform/errors/sentinel.ts";
-import { AppKey } from "../../platform/server/index.ts";
-import { createSalesRouter } from "./adapter/in/http/handler.ts";
-import { DrizzleSalesRepository } from "./adapter/out/postgres/repository.ts";
-import type { SalesService } from "./application/service.ts";
-import { SalesUsecase } from "./application/usecase.ts";
+import { type Config, ConfigKey } from "../../infrastructure/config/config.ts";
+import { type DBHandle, DBKey } from "../../infrastructure/db/index.ts";
+import {
+  ErrConflict,
+  ErrInvalidInput,
+  ErrNotFound,
+} from "../../infrastructure/errors/app-error.ts";
+import { registerSentinel } from "../../infrastructure/errors/sentinel.ts";
+import { AppKey } from "../../infrastructure/server/index.ts";
 import {
   ErrExactChangeRequired,
   ErrInsufficientPayment,
@@ -23,6 +23,10 @@ import {
   ErrProductNotFound,
   ErrUnsupportedCoin,
 } from "./domain/errors.ts";
+import { createSalesRouter } from "./handler/handler.ts";
+import { DrizzleSalesRepository } from "./repository/postgres/repository.ts";
+import type { SalesService } from "./usecase/service.ts";
+import { SalesUsecase } from "./usecase/usecase.ts";
 
 export const SalesRouterKey = Symbol("SalesRouter");
 

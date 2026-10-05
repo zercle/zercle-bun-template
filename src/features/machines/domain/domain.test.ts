@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ErrMachineNotFound, ErrUnsupportedCoin } from "../domain/errors.ts";
-import { addCoins, DENOMINATIONS, validateCoins } from "../domain/machine.ts";
+import { ErrMachineNotFound, ErrUnsupportedCoin } from "./errors.ts";
+import { addCoins, DENOMINATIONS, validateCoins } from "./machine.ts";
 
 describe("machines domain sentinels", () => {
   it("is exported and matchable by identity", () => {

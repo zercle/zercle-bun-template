@@ -8,9 +8,9 @@
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../../app/container.ts";
-import { type Config, ConfigKey } from "../../config/config.ts";
-import { type DBHandle, DBKey } from "../../platform/db/index.ts";
-import { AppKey } from "../../platform/server/index.ts";
+import { type Config, ConfigKey } from "../../infrastructure/config/config.ts";
+import { type DBHandle, DBKey } from "../../infrastructure/db/index.ts";
+import { AppKey } from "../../infrastructure/server/index.ts";
 
 const { sqlFn, fakeSql } = vi.hoisted(() => {
   const sqlFn = vi.fn(() => Promise.resolve([]));
@@ -18,25 +18,25 @@ const { sqlFn, fakeSql } = vi.hoisted(() => {
   return { sqlFn, fakeSql };
 });
 
-vi.mock("../../platform/db/db.ts", () => ({
+vi.mock("../../infrastructure/db/db.ts", () => ({
   createDB: vi.fn(),
   DBKey: Symbol("DB"),
 }));
 
-vi.mock("../../platform/db/register.ts", () => ({
+vi.mock("../../infrastructure/db/register.ts", () => ({
   register: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../platform/messaging/valkey.ts", () => ({
+vi.mock("../../infrastructure/messaging/valkey.ts", () => ({
   register: vi.fn().mockResolvedValue(undefined),
   ValkeyKey: Symbol("Valkey"),
 }));
 
-vi.mock("../../platform/telemetry/register.ts", () => ({
+vi.mock("../../infrastructure/telemetry/register.ts", () => ({
   register: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("../../platform/server/register.ts", () => ({
+vi.mock("../../infrastructure/server/register.ts", () => ({
   register: vi.fn(),
   ApplicationKey: Symbol.for("Application"),
 }));
@@ -149,7 +149,7 @@ describe("machines.register", () => {
 
   it("registers sentinels mapping domain errors to AppError codes when enabled", async () => {
     const { register } = await import("./di.ts");
-    const { httpError } = await import("../../platform/errors/mapper.ts");
+    const { httpError } = await import("../../infrastructure/errors/mapper.ts");
     const domain = await import("./domain/errors.ts");
 
     const container = makeContainer(true);
