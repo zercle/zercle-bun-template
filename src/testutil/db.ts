@@ -19,7 +19,7 @@ import { runMigrate } from "../migrate.ts";
  * Session-level advisory-lock key. Every suite holds it for its lifetime, so
  * suites that share one database (and TRUNCATE each other's tables) run one at
  * a time even though Vitest runs test files in parallel. The value is an
- * arbitrary application constant ("zercl" in ASCII); it only has to be stable.
+ * arbitrary application constant ("zercle" in ASCII); it only has to be stable.
  */
 const INTEGRATION_ADVISORY_LOCK_KEY = 0x7a6572636c65;
 
