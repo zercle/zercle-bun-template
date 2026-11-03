@@ -54,12 +54,14 @@ zercle-bun-template/
 │   │       │   └── postgres/   # Drizzle repository + schema + cache-aside + migrations
 │   │       ├── handler/        # driving adapter: Hono handler
 │   │       └── di.ts           # feature wiring
+│   ├── shared/                 # cross-feature contracts, no feature deps
+│   │   ├── errors/             # error codes, AppError, sentinels, HTTP mapper
+│   │   └── uuid.ts             # the canonical hyphenated-UUID shape
 │   ├── infrastructure/         # cross-cutting, feature-agnostic infrastructure
 │   │   ├── config/             # YAML + env-var configuration loader
 │   │   ├── server/             # Hono app + Application lifecycle
 │   │   ├── middleware/         # requestId, otel, accessLog, recover, cors, bodyLimit
 │   │   ├── telemetry/          # logger, tracer, meter, health registry
-│   │   ├── errors/             # error codes, AppError, sentinels, HTTP mapper
 │   │   ├── db/                 # connection-level Drizzle/postgres wiring (schema-free)
 │   │   └── messaging/          # Valkey (ioredis) + cache-aside
 │   └── testutil/               # shared test helpers + fixtures
@@ -88,6 +90,7 @@ consumer services ──> src/index.ts ──> features/*/contract    (published
 handler ──> usecase.Service ──> repository.Repository <── repository/postgres
 all layers ──> domain (entities + sentinel errors)
 infrastructure/* ── cross-cutting, never imports features/**
+shared/* ── cross-feature contracts, never imports features/** or infrastructure/**
 ```
 
 - `contract` holds the canonical inbound wire types (zod schemas, no feature imports) — the single source of the API shapes.
@@ -95,7 +98,8 @@ infrastructure/* ── cross-cutting, never imports features/**
 - `usecase` declares the inbound service interface (speaking contract types) and its use-case implementation.
 - `repository` declares the outbound (driven) interface; `repository/postgres` satisfies it with Drizzle over the `postgres` driver and owns the table schema and SQL migrations.
 - `handler` is the driving adapter: the Hono handler parses contract types and delegates to the usecase service.
-- `infrastructure` consolidates cross-cutting concerns: config, db pool, valkey, cache-aside, typed errors, middleware, server, telemetry.
+- `shared` holds cross-feature contracts both features and infrastructure depend on: the error catalog (`shared/errors/`) and the canonical UUID shape (`shared/uuid.ts`). It imports nothing but itself.
+- `infrastructure` consolidates cross-cutting concerns: config, db pool, valkey, cache-aside, middleware, server, telemetry.
 
 **Published inbound contract.** `src/index.ts` is the facade over each feature's `contract` types plus the wire error codes, so another service can construct payloads and interpret the `{"error": code, "message": msg}` envelope without importing server internals. Internal code never imports `src/index.ts`; the dependency is strictly outward-only and enforced by `src/architecture.test.ts`.
 
@@ -107,11 +111,12 @@ infrastructure/* ── cross-cutting, never imports features/**
 | `domain-is-innermost` | `features/<f>/domain` | any src import or third-party package |
 | `contract-is-leaf` | `features/<f>/contract` | anything but zod |
 | `repository-interface-depends-only-on-domain` | `features/<f>/repository` | imports outside own `domain` and sibling repository modules |
-| `usecase-depends-on-domain-repository-contract` | `features/<f>/usecase` | imports outside own `domain`, top-level `repository`, `contract`, and sibling usecase modules |
+| `usecase-depends-on-domain-repository-contract` | `features/<f>/usecase` | imports outside own `domain`, top-level `repository`, `contract`, sibling usecase modules, and `shared/**` |
 | `repository-impl-ignores-usecase-and-handler` | `features/<f>/repository/postgres` | importing own `usecase` or `handler` |
 | `handler-ignores-repository` | `features/<f>/handler` | importing own `repository` (interface or postgres impl) |
 | `features-registry-imports-only-own-features` | `features/features.ts` | bare packages; relative imports outside `app/container` and `features/**` |
 | `infrastructure-ignores-features` | `infrastructure/**` | importing `features/**` |
+| `shared-depends-on-nothing-outside-shared` | `shared/**` | any src import outside `shared/**`, any third-party package |
 
 It runs as part of `bun run test`.
 

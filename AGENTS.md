@@ -19,11 +19,11 @@ consumer services ──> src/index.ts ──> features/*/contract    (published
 handler ──> usecase.Service ──> repository.Repository <── repository/postgres
 all layers ──> domain (entities + sentinel errors; no src or third-party imports)
 infrastructure/* ── feature-agnostic, never imports features/**
-```
+shared/* ── cross-feature contracts, never imports features/** or infrastructure/**
 
-A request flows: `src/main.ts` (thin entry; reads `APP_VERSION`/`APP_COMMIT_SHA`/`APP_BUILD_TIME`, calls `run`) → `src/app/app.ts` `run` builds a `Container` and calls `build`, which wires in fixed order — `loadConfig` (register `Config`) → `telemetry` (logger, tracer, meter, health registry) → `db` → `valkey` → `server` (Hono app + `Application`) → `features` (via `registerAll`) → `Application.start()` calls `Bun.serve`. A feature `register` resolves its deps from the container, mounts its router at `/api/v1`, and the `handler` binds the zod `contract`, calls the `usecase.Service`, which parses ids, applies business rules, and maps domain↔contract → `repository.Repository` (Drizzle) behind an optional `CachedRepository` decorator (catalog's cache-aside; other features use the Drizzle repository directly) → domain sentinel errors are mapped to the HTTP envelope by `infrastructure/errors` (`registerSentinel` + `httpError`).
+A request flows: `src/main.ts` (thin entry; reads `APP_VERSION`/`APP_COMMIT_SHA`/`APP_BUILD_TIME`, calls `run`) → `src/app/app.ts` `run` builds a `Container` and calls `build`, which wires in fixed order — `loadConfig` (register `Config`) → `telemetry` (logger, tracer, meter, health registry) → `db` → `valkey` → `server` (Hono app + `Application`) → `features` (via `registerAll`) → `Application.start()` calls `Bun.serve`. A feature `register` resolves its deps from the container, mounts its router at `/api/v1`, and the `handler` binds the zod `contract`, calls the `usecase.Service`, which parses ids, applies business rules, and maps domain↔contract → `repository.Repository` (Drizzle) behind an optional `CachedRepository` decorator (catalog's cache-aside; other features use the Drizzle repository directly) → domain sentinel errors are mapped to the HTTP envelope by `shared/errors` (`registerSentinel` + `httpError`).
 
-**Dependency gates** — `src/architecture.test.ts` scans the import specifiers of every non-test source file under `src/` across 9 rules; a violation fails with the rule name and rationale. If a change trips a rule, **restructure the change — never weaken the rule**:
+**Dependency gates** — `src/architecture.test.ts` scans the import specifiers of every non-test source file under `src/` across 10 rules; a violation fails with the rule name and rationale. If a change trips a rule, **restructure the change — never weaken the rule**:
 
 | Rule | Forbids |
 |---|---|
@@ -32,6 +32,7 @@ A request flows: `src/main.ts` (thin entry; reads `APP_VERSION`/`APP_COMMIT_SHA`
 | `contract-is-leaf` | anything but `zod` and its own `features/<f>/contract` |
 | `repository-interface-depends-only-on-domain` | the top-level `repository` module importing outside its own `domain`/sibling repository modules |
 | `usecase-depends-on-domain-repository-contract` | `features/<f>/usecase` importing outside its own `domain`, top-level `repository`, `contract`, and sibling usecase modules |
+| `shared-depends-on-nothing-outside-shared` | `shared/**` importing anything outside its own `shared/**` (no bare packages) |
 | `repository-impl-ignores-usecase-and-handler` | `repository/postgres/**` importing its own `usecase` or `handler` |
 | `handler-ignores-repository` | `features/<f>/handler` importing its own `repository` |
 | `features-registry-imports-only-own-features` | the registry importing bare packages or relative paths outside `app/container` and `features/**` |
@@ -43,10 +44,11 @@ A request flows: `src/main.ts` (thin entry; reads `APP_VERSION`/`APP_COMMIT_SHA`
 - `src/migrate.ts` — self-contained migration runner (`up`/`down`/`status`); merges every registered feature's migrations via `migrationSources()` into one global version namespace.
 - `src/index.ts` — published inbound facade (contract re-exports + error codes + `AppType`); outward-only.
 - `src/app/` — reusable composition root: `container.ts` (eager-singleton DI) and `app.ts` (`build`/`run`).
-- `src/architecture.test.ts` — the 9 dependency gates (source of truth for layering).
+- `src/architecture.test.ts` — the 10 dependency gates (source of truth for layering).
 - `src/features/features.ts` — the feature registry: `features`, `registerAll`, `migrationSources`. Its order is also the migration order (catalog 1, machines 2, sales 3; reporting owns no schema and no `migrationsDir`).
 - `src/features/{catalog,machines,sales,reporting}/` — the four demo features. Layers, each its own directory: `contract` (zod wire types, zero deps), `domain` (entities + sentinels), `usecase` (`Service` interface + implementation), `repository` (outbound interface) and `repository/postgres/` (Drizzle impl + `schema.ts` + `migrations/`, plus catalog's cache-aside decorator), `handler` (Hono), `di.ts` (wiring). Features never import each other; `sales` and `reporting` read the other features' tables through their own repository ports.
-- `src/infrastructure/` — cross-cutting: `config`, `db`, `messaging` (Valkey + cache-aside), `errors`, `middleware`, `server`, `telemetry`.
+- `src/shared/` — cross-feature contracts features and infrastructure both depend on: `errors/` (wire codes, `AppError`, sentinels, HTTP mapper) and `uuid.ts` (the canonical hyphenated-UUID shape). Imports nothing but itself.
+- `src/infrastructure/` — cross-cutting: `config`, `db`, `messaging` (Valkey + cache-aside), `middleware`, `server`, `telemetry`.
 - `src/testutil/` — shared integration helpers (`newIntegrationDB`, `truncateTables`) + fixtures.
 - `test/e2e/` — end-to-end tests.
 
@@ -71,7 +73,7 @@ Local services: `docker compose up -d postgres valkey` (`compose.yml` uses `post
 
 - **Naming.** Layer directories are fixed lowercase nouns (`contract`, `domain`, `usecase`, `repository`, `handler`). Interfaces are named by role, not feature: `usecase.Service` (inbound), `repository.Repository` (outbound). Impls: `Usecase`, `Drizzle*Repository`, `CachedRepository` (decorator), `Handler`/`create*Router`. Every feature exposes one `register(container)` entry in `di.ts`. Files are kebab-case (`.ts`); imports carry the explicit `.ts` extension (Bun/TS `allowImportingTsExtensions`).
 - **DI.** `Container` is an eager singleton: `register(key, factory)` invokes the factory immediately and stores the value; keys are `Symbol("Name")` exported by the owning module. `build` wires in a fixed order and `resolve` throws on a missing key, so registration-order mistakes fail fast.
-- **Error handling.** Three tiers: (1) **domain sentinels** — package-level `Err*` `Error` objects in `features/*/domain/errors.ts`; (2) **boundary sentinels** — `AppError` values in `infrastructure/errors/app-error.ts` (`ErrNotFound`, `ErrInvalidInput`, `ErrInternal`, …), codes from `infrastructure/errors/errcodes.ts` so served and published codes cannot drift; (3) **registration** — features call `registerSentinel(domain.ErrX, ErrY)` in `di.ts`, and handlers map any error via `httpError(err)` into `{status, body}`. The envelope is always `{"error": code, "message": msg}`.
+- **Error handling.** Three tiers: (1) **domain sentinels** — package-level `Err*` `Error` objects in `features/*/domain/errors.ts`; (2) **boundary sentinels** — `AppError` values in `shared/errors/app-error.ts` (`ErrNotFound`, `ErrInvalidInput`, `ErrInternal`, …), codes from `shared/errors/errcodes.ts` so served and published codes cannot drift; (3) **registration** — features call `registerSentinel(domain.ErrX, ErrY)` in `di.ts`, and handlers map any error via `httpError(err)` into `{status, body}`. The envelope is always `{"error": code, "message": msg}`.
 - **Config.** Loaded from `config.yaml` + unprefixed env vars (env wins) and validated by one zod schema in `src/infrastructure/config/config.ts`; `CONFIG_FILE` overrides the path. Durations accept `15s`/`30m`/`1h` and are stored as seconds; `http.body_limit` accepts `1M`-style sizes. Cross-section checks (e.g. reporting bounds) fail startup. `CATALOG_ENABLED` / `MACHINES_ENABLED` / `SALES_ENABLED` / `REPORTING_ENABLED` gate each demo feature's providers and routes entirely.
 - **Persistence.** Each feature owns its Drizzle table definitions in `repository/postgres/schema.ts` and its SQL migrations under `repository/postgres/migrations/`. The schema is owned by the migration, never by `AutoMigrate`-style tooling. `reporting` owns no schema: it declares read-only table projections in `refs.ts` (NOT `schema.ts`) so `drizzle-kit` never emits DDL for other features' tables.
 - **Formatting:** Biome — double quotes, 2-space indent, semicolons, trailing commas, 100-column lines, organized imports (`.editorconfig` mirrors the layout: LF, final newline).
