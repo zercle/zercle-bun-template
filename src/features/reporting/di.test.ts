@@ -155,7 +155,7 @@ describe("reporting.register", () => {
 
   it("registers the sentinel mapping the domain error to INVALID_INPUT", async () => {
     const { register } = await import("./di.ts");
-    const { httpError } = await import("../../infrastructure/errors/mapper.ts");
+    const { httpError } = await import("../../shared/errors/mapper.ts");
     const domain = await import("./domain/errors.ts");
     const container = makeContainer(true);
 

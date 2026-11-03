@@ -11,6 +11,8 @@
  *     nothing
  *   - the wire contract is a dependency-free leaf, published outward only
  *     through the `src/index.ts` facade
+ *   - the shared layer holds cross-feature contracts (the error catalog, the
+ *     id shape) and depends on nothing but itself
  *   - infrastructure code stays feature-agnostic
  *
  * Test files are exempt (they wire fakes across layers by design), as is
@@ -161,6 +163,16 @@ const rules: Rule[] = [
     why: "cross-cutting infrastructure must stay feature-agnostic; features depend on infrastructure, never the reverse",
     applies: (rel) => rel === "infrastructure" || rel.startsWith("infrastructure/"),
     denied: (_rel, imp) => imp.src?.startsWith("features/") === true,
+  },
+  {
+    name: "shared-depends-on-nothing-outside-shared",
+    why: "the shared layer holds cross-feature contracts (the error catalog, the id shape); it depends on nothing but itself, so features and infrastructure can both rely on it",
+    applies: (rel) => rel === "shared" || rel.startsWith("shared/"),
+    denied: (_rel, imp) => {
+      if (imp.bare !== undefined) return true;
+      if (imp.src === undefined) return false;
+      return !within(imp.src, "shared");
+    },
   },
 ];
 

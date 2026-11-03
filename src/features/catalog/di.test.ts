@@ -139,7 +139,7 @@ describe("catalog.register", () => {
 
   it("registers sentinels mapping domain errors to AppError codes", async () => {
     const { register } = await import("./di.ts");
-    const { httpError } = await import("../../infrastructure/errors/mapper.ts");
+    const { httpError } = await import("../../shared/errors/mapper.ts");
     const domain = await import("./domain/errors.ts");
     const container = makeContainer();
 

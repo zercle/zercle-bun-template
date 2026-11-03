@@ -76,7 +76,7 @@ export {
   ErrCodeInvalidInput,
   ErrCodeNotFound,
   ErrCodeUnauthorized,
-} from "./infrastructure/errors/errcodes.ts";
+} from "./shared/errors/errcodes.ts";
 
 // --- Type-safe RPC surface ---------------------------------------------------
 
