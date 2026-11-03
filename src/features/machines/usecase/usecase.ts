@@ -18,7 +18,7 @@ const defaultPageSizeFallback = 20;
 const maxPageSizeFallback = 100;
 const maxLabelLengthFallback = 255;
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID_RE } from "../../../shared/uuid.ts";
 
 /** Map a domain entity to its wire representation (RFC3339 timestamps). */
 function toMachineResponse(machine: Machine): MachineResponse {

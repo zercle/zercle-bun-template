@@ -4,14 +4,14 @@
  * outbound repository, and maps the result to the wire contract. Depends only on
  * `contract`, `domain`, `repository`, and sibling `usecase` modules.
  */
+
+import { UUID_RE } from "../../../shared/uuid.ts";
 import type { PurchaseRequest, PurchaseResponse } from "../contract/purchase.ts";
 import { sumCoins, validateCoins } from "../domain/coins.ts";
 import { ErrInvalidID } from "../domain/errors.ts";
 import { type PurchaseRecord, purchase } from "../domain/purchase.ts";
 import type { SalesRepository } from "../repository/repository.ts";
 import type { SalesService } from "./service.ts";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Map a domain purchase record to its wire representation (RFC3339 timestamp). */
 function toPurchaseResponse(record: PurchaseRecord): PurchaseResponse {
