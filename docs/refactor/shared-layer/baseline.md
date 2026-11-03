@@ -1,4 +1,4 @@
-# Capture — d0ede09 (refactor/shared-layer)
+# Capture — d0ede09 ()
 
 node: v26.13.0
 
@@ -10,7 +10,7 @@ node: v26.13.0
 
 ### `bun run lint`
   $ biome check src test
-  Checked 128 files in 26ms. No fixes applied.
+  Checked 128 files in 35ms. No fixes applied.
   exit: 0
 
 ## Suites
@@ -36,6 +36,7 @@ node: v26.13.0
 - src files (all): 127
 - src LOC (non-test): 4494
 - test LOC: 7146
+- src LOC (non-test, code only): 3019
 - UUID_RE definitions: 5
 - shared layer files: 0
 - duplicated 6-line blocks: total duplicated 6-line blocks: 52

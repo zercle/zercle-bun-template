@@ -95,6 +95,7 @@ echo "- src files (non-test): $(find src -name '*.ts' -not -name '*.test.ts' | w
 echo "- src files (all): $(find src -name '*.ts' | wc -l | tr -d ' ')"
 echo "- src LOC (non-test): $(find src -name '*.ts' -not -name '*.test.ts' -exec cat {} + | wc -l | tr -d ' ')"
 echo "- test LOC: $(find src test -name '*.test.ts' -exec cat {} + | wc -l | tr -d ' ')"
+echo "- src LOC (non-test, code only): $(find src -name '*.ts' -not -name '*.test.ts' -exec cat {} + | grep -v '^[[:space:]]*$' | grep -v '^[[:space:]]*//' | grep -v '^[[:space:]]*\*' | grep -v '^[[:space:]]*/\*' | wc -l | tr -d ' ')"
 echo "- UUID_RE definitions: $(grep -rn 'UUID_RE = ' src --include='*.ts' | grep -v '.test.ts' | wc -l | tr -d ' ')"
 echo "- shared layer files: $(find src/shared -name '*.ts' 2>/dev/null | wc -l | tr -d ' ')"
 echo "- duplicated 6-line blocks: $(node docs/refactor/shared-layer/duplicates.mjs | tail -1)"
