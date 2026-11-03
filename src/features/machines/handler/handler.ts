@@ -6,8 +6,8 @@
  * `src/architecture.test.ts`).
  */
 import { Hono } from "hono";
-import { ErrInvalidInput } from "../../../infrastructure/errors/app-error.ts";
-import { httpError } from "../../../infrastructure/errors/mapper.ts";
+import { ErrInvalidInput } from "../../../shared/errors/app-error.ts";
+import { httpError } from "../../../shared/errors/mapper.ts";
 import { CreateMachineRequest } from "../contract/create-machine.ts";
 import { ListMachinesRequest, RestockBankRequest } from "../contract/list-machines.ts";
 import { ErrInvalidID } from "../domain/errors.ts";

@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { pino } from "pino";
 import { describe, expect, it, vi } from "vitest";
+import { httpError } from "../../shared/errors/mapper.ts";
 import type { Config } from "../config/config.ts";
-import { httpError } from "../errors/mapper.ts";
 import { accessLog } from "./access-log.ts";
 import { getRequestId } from "./context.ts";
 import { cors } from "./cors.ts";
