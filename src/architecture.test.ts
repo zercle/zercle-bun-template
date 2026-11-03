@@ -105,7 +105,7 @@ const rules: Rule[] = [
   },
   {
     name: "usecase-depends-on-domain-repository-contract",
-    why: "use cases orchestrate their own feature's domain, repository interface, wire contract, and sibling usecase modules, nothing else",
+    why: "use cases orchestrate their own feature's domain, repository interface, wire contract, sibling usecase modules, and the shared layer, nothing else",
     applies: (rel) => {
       const segs = segments(rel);
       return segs[0] === "features" && segs[2] === "usecase";
@@ -118,7 +118,9 @@ const rules: Rule[] = [
       const topLevelRepository = posix.dirname(imp.src) === `${fdir}/repository`;
       const allowed = ["domain", "contract", "usecase"] as const;
       return !(
-        topLevelRepository || allowed.some((layer) => within(imp.src as string, `${fdir}/${layer}`))
+        topLevelRepository ||
+        within(imp.src, "shared") ||
+        allowed.some((layer) => within(imp.src as string, `${fdir}/${layer}`))
       );
     },
   },
