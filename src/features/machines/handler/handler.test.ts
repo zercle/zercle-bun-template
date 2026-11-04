@@ -1,7 +1,8 @@
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrInvalidInput, ErrNotFound } from "../../../shared/errors/app-error.ts";
 import { registerSentinel } from "../../../shared/errors/sentinel.ts";
+import { request } from "../../../testutil/http.ts";
 import type { MachineResponse } from "../contract/create-machine.ts";
 import type { ListMachinesResponse } from "../contract/list-machines.ts";
 import {
@@ -44,18 +45,17 @@ describe("machines router (HTTP)", () => {
   });
 
   let service: MachineService;
-  let app: Hono;
+  let app: Elysia;
 
   beforeEach(() => {
     service = makeService();
-    app = new Hono();
-    app.route("/", createMachinesRouter({ service }));
+    app = new Elysia().use(createMachinesRouter({ service }));
   });
 
   it("POST /machines with valid body -> 201 + machine response", async () => {
     vi.mocked(service.create).mockResolvedValueOnce(fixedResponse("m1"));
 
-    const res = await app.request("/machines", {
+    const res = await request(app, "/machines", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ label: "m1", initial_coins: [25, 25] }),
@@ -70,7 +70,7 @@ describe("machines router (HTTP)", () => {
   });
 
   it("POST /machines with invalid JSON -> 400 INVALID_INPUT", async () => {
-    const res = await app.request("/machines", {
+    const res = await request(app, "/machines", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: "{",
@@ -83,7 +83,7 @@ describe("machines router (HTTP)", () => {
   });
 
   it("POST /machines missing label -> 400 INVALID_INPUT", async () => {
-    const res = await app.request("/machines", {
+    const res = await request(app, "/machines", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({}),
@@ -98,7 +98,7 @@ describe("machines router (HTTP)", () => {
   it("GET /machines/:id with valid uuid -> 200 + machine", async () => {
     vi.mocked(service.get).mockResolvedValueOnce(fixedResponse("m1"));
 
-    const res = await app.request(`/machines/${UUID}`);
+    const res = await request(app, `/machines/${UUID}`);
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
     expect(body.id).toBe(UUID);
@@ -106,7 +106,7 @@ describe("machines router (HTTP)", () => {
   });
 
   it("GET /machines/:id with invalid uuid -> 400 INVALID_INPUT", async () => {
-    const res = await app.request("/machines/not-a-uuid");
+    const res = await request(app, "/machines/not-a-uuid");
     expect(res.status).toBe(400);
     const body = (await res.json()) as Record<string, unknown>;
     expect(body.error).toBe("INVALID_INPUT");
@@ -116,7 +116,7 @@ describe("machines router (HTTP)", () => {
   it("GET /machines/:id not found -> 404 NOT_FOUND", async () => {
     vi.mocked(service.get).mockRejectedValueOnce(ErrMachineNotFound);
 
-    const res = await app.request(`/machines/${UUID}`);
+    const res = await request(app, `/machines/${UUID}`);
     expect(res.status).toBe(404);
     const body = (await res.json()) as Record<string, unknown>;
     expect(body.error).toBe("NOT_FOUND");
@@ -126,7 +126,7 @@ describe("machines router (HTTP)", () => {
     const resp: ListMachinesResponse = { machines: [fixedResponse("a"), fixedResponse("b")] };
     vi.mocked(service.list).mockResolvedValueOnce(resp);
 
-    const res = await app.request("/machines?limit=10");
+    const res = await request(app, "/machines?limit=10");
     expect(res.status).toBe(200);
     const body = (await res.json()) as { machines: Array<Record<string, unknown>> };
     expect(body.machines).toHaveLength(2);
@@ -137,7 +137,7 @@ describe("machines router (HTTP)", () => {
   it("POST /machines/:id/bank with valid body -> 200 + machine response", async () => {
     vi.mocked(service.restockBank).mockResolvedValueOnce(fixedResponse("m1"));
 
-    const res = await app.request(`/machines/${UUID}/bank`, {
+    const res = await request(app, `/machines/${UUID}/bank`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ coins: [25, 25] }),
@@ -150,7 +150,7 @@ describe("machines router (HTTP)", () => {
   });
 
   it("POST /machines/:id/bank with invalid uuid -> 400 INVALID_INPUT", async () => {
-    const res = await app.request("/machines/not-a-uuid/bank", {
+    const res = await request(app, "/machines/not-a-uuid/bank", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ coins: [25] }),
@@ -165,7 +165,7 @@ describe("machines router (HTTP)", () => {
   it("POST /machines/:id/bank with unsupported coin -> 400 INVALID_INPUT", async () => {
     vi.mocked(service.restockBank).mockRejectedValueOnce(ErrUnsupportedCoin);
 
-    const res = await app.request(`/machines/${UUID}/bank`, {
+    const res = await request(app, `/machines/${UUID}/bank`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ coins: [7] }),
@@ -177,7 +177,7 @@ describe("machines router (HTTP)", () => {
   });
 
   it("POST /machines/:id/bank missing coins -> 400 INVALID_INPUT", async () => {
-    const res = await app.request(`/machines/${UUID}/bank`, {
+    const res = await request(app, `/machines/${UUID}/bank`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ coins: [] }),

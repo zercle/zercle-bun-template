@@ -5,116 +5,106 @@
  * repository or its postgres implementation directly (enforced by
  * `src/architecture.test.ts`).
  */
-import { Hono } from "hono";
+import { Elysia, status } from "elysia";
 import { ErrInvalidInput } from "../../../shared/errors/app-error.ts";
-import { httpError } from "../../../shared/errors/mapper.ts";
+import { errorResponse } from "../../../shared/errors/respond.ts";
+import { parseJsonBody } from "../../../shared/http-body.ts";
 import { UUID_RE } from "../../../shared/uuid.ts";
 import { CreateMachineRequest } from "../contract/create-machine.ts";
 import { ListMachinesRequest, RestockBankRequest } from "../contract/list-machines.ts";
 import { ErrInvalidID } from "../domain/errors.ts";
 import type { MachineService } from "../usecase/service.ts";
 
-export function createMachinesRouter(deps: { service: MachineService }): Hono {
+export function createMachinesRouter(deps: { service: MachineService }): Elysia {
   const { service } = deps;
-  const router = new Hono();
+  const router = new Elysia();
 
-  router.post("/machines", async (c) => {
-    let body: unknown;
-    try {
-      body = await c.req.json();
-    } catch {
-      const { status, body: errBody } = httpError(ErrInvalidInput);
-      return c.json(errBody, status as 200);
-    }
-    const parsed = CreateMachineRequest.safeParse(body);
-    if (!parsed.success) {
-      const { status, body: errBody } = httpError(ErrInvalidInput);
-      return c.json(errBody, status as 200);
-    }
-    try {
-      const resp = await service.create(parsed.data);
-      return c.json(resp, 201);
-    } catch (err) {
-      const { status, body: errBody } = httpError(err);
-      return c.json(errBody, status as 200);
-    }
-  });
+  router.post(
+    "/machines",
+    async ({ request }) => {
+      const body = await parseJsonBody(request);
+      if (!body.ok) {
+        return errorResponse(ErrInvalidInput);
+      }
+      const parsed = CreateMachineRequest.safeParse(body.value);
+      if (!parsed.success) {
+        return errorResponse(ErrInvalidInput);
+      }
+      try {
+        const resp = await service.create(parsed.data);
+        return status(201, resp);
+      } catch (err) {
+        return errorResponse(err);
+      }
+    },
+    { parse: "none" },
+  );
 
-  router.get("/machines", async (c) => {
-    const rawLimit = c.req.query("limit");
-    const rawOffset = c.req.query("offset");
-    const query: { limit?: number; offset?: number } = {};
+  router.get("/machines", async ({ query }) => {
+    const parsedQuery: { limit?: number; offset?: number } = {};
+    const rawLimit = query.limit;
+    const rawOffset = query.offset;
     if (rawLimit !== undefined && rawLimit.length > 0) {
       const n = Number(rawLimit);
       if (!Number.isFinite(n)) {
-        const { status, body: errBody } = httpError(ErrInvalidInput);
-        return c.json(errBody, status as 200);
+        return errorResponse(ErrInvalidInput);
       }
-      query.limit = n;
+      parsedQuery.limit = n;
     }
     if (rawOffset !== undefined && rawOffset.length > 0) {
       const n = Number(rawOffset);
       if (!Number.isFinite(n)) {
-        const { status, body: errBody } = httpError(ErrInvalidInput);
-        return c.json(errBody, status as 200);
+        return errorResponse(ErrInvalidInput);
       }
-      query.offset = n;
+      parsedQuery.offset = n;
     }
-    const parsed = ListMachinesRequest.safeParse(query);
+    const parsed = ListMachinesRequest.safeParse(parsedQuery);
     if (!parsed.success) {
-      const { status, body: errBody } = httpError(ErrInvalidInput);
-      return c.json(errBody, status as 200);
+      return errorResponse(ErrInvalidInput);
     }
     try {
-      const resp = await service.list(parsed.data);
-      return c.json(resp, 200);
+      return await service.list(parsed.data);
     } catch (err) {
-      const { status, body: errBody } = httpError(err);
-      return c.json(errBody, status as 200);
+      return errorResponse(err);
     }
   });
 
-  router.get("/machines/:id", async (c) => {
-    const id = c.req.param("id");
+  router.get("/machines/:id", async ({ params }) => {
+    const id = params.id;
     if (!UUID_RE.test(id)) {
-      const { status, body: errBody } = httpError(ErrInvalidID);
-      return c.json(errBody, status as 200);
+      return errorResponse(ErrInvalidID);
     }
     try {
-      const resp = await service.get(id);
-      return c.json(resp, 200);
+      return await service.get(id);
     } catch (err) {
-      const { status, body: errBody } = httpError(err);
-      return c.json(errBody, status as 200);
+      return errorResponse(err);
     }
   });
 
-  router.post("/machines/:id/bank", async (c) => {
-    const id = c.req.param("id");
-    if (!UUID_RE.test(id)) {
-      const { status, body: errBody } = httpError(ErrInvalidID);
-      return c.json(errBody, status as 200);
-    }
-    let body: unknown;
-    try {
-      body = await c.req.json();
-    } catch {
-      const { status, body: errBody } = httpError(ErrInvalidInput);
-      return c.json(errBody, status as 200);
-    }
-    const parsed = RestockBankRequest.safeParse(body);
-    if (!parsed.success) {
-      const { status, body: errBody } = httpError(ErrInvalidInput);
-      return c.json(errBody, status as 200);
-    }
-    try {
-      const resp = await service.restockBank(id, parsed.data);
-      return c.json(resp, 200);
-    } catch (err) {
-      const { status, body: errBody } = httpError(err);
-      return c.json(errBody, status as 200);
-    }
-  });
+  router.post(
+    "/machines/:id/bank",
+    async ({ params, request }) => {
+      const id = params.id;
+      if (!UUID_RE.test(id)) {
+        return errorResponse(ErrInvalidID);
+      }
+      const body = await parseJsonBody(request);
+      if (!body.ok) {
+        return errorResponse(ErrInvalidInput);
+      }
+      const parsed = RestockBankRequest.safeParse(body.value);
+      if (!parsed.success) {
+        return errorResponse(ErrInvalidInput);
+      }
+      try {
+        const resp = await service.restockBank(id, parsed.data);
+        return resp;
+      } catch (err) {
+        return errorResponse(err);
+      }
+    },
+    { parse: "none" },
+  );
 
   return router;
 }

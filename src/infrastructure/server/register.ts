@@ -1,5 +1,5 @@
 /**
- * DI registration for the shared server layer: Hono app + Application
+ * DI registration for the shared server layer: Elysia app + Application
  * orchestrator. Depends on `Config`, `Logger`, and `HealthRegistry` already
  * being registered in the container.
  */
@@ -11,7 +11,7 @@ import { AppKey, buildApp } from "./http.ts";
 export const ApplicationKey = Symbol("Application");
 
 /**
- * Build the Hono app and the `Application` orchestrator and register both
+ * Build the Elysia app and the `Application` orchestrator and register both
  * in the container. Idempotent only at the level of a fresh container — the
  * underlying `Bun.serve` lifecycle is owned by the `Application` instance.
  */

@@ -1,11 +1,11 @@
 /**
  * Unit tests for the machines feature's DI registration. We provide a container
- * with `Config`, `DBHandle`, and a Hono `App` already registered, then assert
+ * with `Config`, `DBHandle`, and a Elysia `App` already registered, then assert
  * that `register` mounts the machines router at `/api/v1`, wires the machine
  * service backed by a Drizzle repository, and honors the `machines.enabled`
  * feature flag.
  */
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../../app/container.ts";
 import { type Config, ConfigKey } from "../../infrastructure/config/config.ts";
@@ -113,7 +113,7 @@ function makeCfg(machinesEnabled: boolean): Config {
 
 function makeContainer(machinesEnabled: boolean): Container {
   const container = new Container();
-  const app = new Hono();
+  const app = new Elysia();
   container.registerValue(ConfigKey, makeCfg(machinesEnabled));
   container.registerValue(DBKey, {
     db: { _drizzle: true },
@@ -125,15 +125,15 @@ function makeContainer(machinesEnabled: boolean): Container {
 }
 
 describe("machines.register", () => {
-  it("mounts the machines router under /api/v1 on the existing Hono app when enabled", async () => {
+  it("mounts the machines router under /api/v1 on the existing Elysia app when enabled", async () => {
     const { register, MachinesRouterKey } = await import("./di.ts");
 
     const container = makeContainer(true);
     register(container);
 
     expect(container.tryResolve(MachinesRouterKey)).toBeDefined();
-    const app = container.resolve<{ route: ReturnType<typeof vi.fn> }>(AppKey);
-    expect(app.route).toBeDefined();
+    const app = container.resolve<Elysia>(AppKey);
+    expect(app.routes.map((r) => `${r.method} ${r.path}`)).toContain("POST /api/v1/machines");
     // route is called when the machines router is mounted.
   });
 

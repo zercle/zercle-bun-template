@@ -11,15 +11,15 @@
  * outward-only and enforced by `src/architecture.test.ts`. A future v2
  * contract is a new facade module, not a change here.
  *
- * `AppType` is the type of the Hono app with all three demo features' `/api/v1`
- * routes mounted, for fully type-safe RPC via `hono/client`:
+ * `AppType` is the type of the Elysia app with all demo features' `/api/v1`
+ * routes mounted, for fully type-safe RPC via Eden Treaty:
  *
- *   import { hc } from "hono/client";
+ *   import { treaty } from "@elysiajs/eden";
  *   import type { AppType } from "zercle-bun-template";
- *   const client = hc<AppType>("http://localhost:8080");
- *   const res = await client.api.v1.products.$post({ json: { name: "x", price_cents: 75 } });
- *   await client.api.v1.machines.$get();
- *   await client.api.v1.purchases.$post({ json: { machine_id, product_id, coins: [100] } });
+ *   const client = treaty<AppType>("http://localhost:8080");
+ *   const res = await client.api.v1.products.post({ name: "x", price_cents: 75 });
+ *   await client.api.v1.machines.get();
+ *   await client.api.v1.purchases.post({ machine_id, product_id, coins: [100] });
  *
  * Construction note: each `create*Router` only registers routes (no I/O at
  * construction time), so stub services are passed purely to capture the route
@@ -30,7 +30,7 @@
  * are not included in `AppType`. Clients that need to hit them can call
  * `fetch(base + "/healthz")` directly.
  */
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 import { createCatalogRouter } from "./features/catalog/handler/handler.ts";
 import type { ProductService } from "./features/catalog/usecase/service.ts";
 import { createMachinesRouter } from "./features/machines/handler/handler.ts";
@@ -80,9 +80,11 @@ export {
 
 // --- Type-safe RPC surface ---------------------------------------------------
 
-const _typeApp = new Hono()
-  .route("/api/v1", createCatalogRouter({ service: {} as ProductService }))
-  .route("/api/v1", createMachinesRouter({ service: {} as MachineService }))
-  .route("/api/v1", createSalesRouter({ service: {} as SalesService }));
+const _typeApp = new Elysia().group("/api/v1", (group) =>
+  group
+    .use(createCatalogRouter({ service: {} as ProductService }))
+    .use(createMachinesRouter({ service: {} as MachineService }))
+    .use(createSalesRouter({ service: {} as SalesService })),
+);
 
 export type AppType = typeof _typeApp;

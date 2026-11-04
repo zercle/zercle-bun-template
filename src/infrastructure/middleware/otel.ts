@@ -1,31 +1,43 @@
 import { SpanStatusCode, trace } from "@opentelemetry/api";
-import type { MiddlewareHandler } from "hono";
+import type { Context } from "elysia";
+import { getRequestState } from "./context.ts";
+import { type MapResponseContext, responseStatus } from "./response-status.ts";
 
-export function otel(): MiddlewareHandler {
+/**
+ * Start a span per request, named after the matched route so the span name is
+ * low-cardinality. The span is closed by the response hook, once the status
+ * the client receives is known.
+ */
+export function otel(): (context: Context) => void {
   const tracer = trace.getTracer("zercle-bun-template");
-  return async (c, next) => {
-    const routeRaw = c.req.routePath;
-    const route = routeRaw && routeRaw.length > 0 ? routeRaw : c.req.path;
-    return tracer.startActiveSpan(`${c.req.method} ${route}`, async (span) => {
-      span.setAttribute("http.method", c.req.method);
-      span.setAttribute("http.route", route);
-      try {
-        await next();
-      } catch (err) {
-        span.recordException(err instanceof Error ? err : new Error(String(err)));
+  return ({ request, route, path }) => {
+    const name = route.length > 0 ? `${request.method} ${route}` : `${request.method} ${path}`;
+    const span = tracer.startSpan(name);
+    span.setAttribute("http.method", request.method);
+    span.setAttribute("http.route", route.length > 0 ? route : path);
+    span.setStatus({ code: SpanStatusCode.UNSET });
+
+    const state = getRequestState();
+    if (state !== undefined) {
+      state.span = span;
+    }
+  };
+}
+
+/**
+ * Close the request span with the status the client received.
+ */
+export function otelEnd(): (context: MapResponseContext) => void {
+  return (context) => {
+    const state = getRequestState();
+    const span = state?.span;
+    if (span !== undefined) {
+      const status = responseStatus(context);
+      span.setAttribute("http.response.status_code", status);
+      if (status >= 500) {
         span.setStatus({ code: SpanStatusCode.ERROR });
-        throw err;
-      } finally {
-        const status = c.res?.status ?? 500;
-        span.setAttribute("http.response.status_code", status);
-        if (c.error) {
-          span.recordException(c.error);
-        }
-        if (status >= 500) {
-          span.setStatus({ code: SpanStatusCode.ERROR });
-        }
-        span.end();
       }
-    });
+      span.end();
+    }
   };
 }

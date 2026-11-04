@@ -3,10 +3,11 @@
  * `ReportingService` stands in for the usecase layer so the router's query
  * parsing, status codes, and error envelope are exercised without a database.
  */
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrInvalidInput } from "../../../shared/errors/app-error.ts";
 import { registerSentinel } from "../../../shared/errors/sentinel.ts";
+import { request } from "../../../testutil/http.ts";
 import type { SummaryResponse } from "../contract/summary.ts";
 import { ErrInvalidTopMachines } from "../domain/errors.ts";
 import type { ReportingService } from "../usecase/service.ts";
@@ -36,19 +37,18 @@ describe("reporting router (HTTP)", () => {
   });
 
   let service: ReportingService;
-  let app: Hono;
+  let app: Elysia;
 
   beforeEach(() => {
     service = makeService();
-    app = new Hono();
-    app.route("/", createReportingRouter({ service }));
+    app = new Elysia().use(createReportingRouter({ service }));
   });
 
   it("GET /reports/summary?top=3 -> 200 + summary response", async () => {
     const resp = fixedResponse();
     vi.mocked(service.summary).mockResolvedValueOnce(resp);
 
-    const res = await app.request("/reports/summary?top=3");
+    const res = await request(app, "/reports/summary?top=3");
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
@@ -60,14 +60,14 @@ describe("reporting router (HTTP)", () => {
   it("GET /reports/summary without top -> 200 and an absent top", async () => {
     vi.mocked(service.summary).mockResolvedValueOnce(fixedResponse());
 
-    const res = await app.request("/reports/summary");
+    const res = await request(app, "/reports/summary");
 
     expect(res.status).toBe(200);
     expect(service.summary).toHaveBeenCalledWith({});
   });
 
   it("GET /reports/summary?top=abc -> 400 INVALID_INPUT", async () => {
-    const res = await app.request("/reports/summary?top=abc");
+    const res = await request(app, "/reports/summary?top=abc");
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as Record<string, unknown>;
@@ -76,7 +76,7 @@ describe("reporting router (HTTP)", () => {
   });
 
   it("GET /reports/summary?top=-1 -> 400 INVALID_INPUT", async () => {
-    const res = await app.request("/reports/summary?top=-1");
+    const res = await request(app, "/reports/summary?top=-1");
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as Record<string, unknown>;
@@ -87,7 +87,7 @@ describe("reporting router (HTTP)", () => {
   it("maps ErrInvalidTopMachines to 400 INVALID_INPUT", async () => {
     vi.mocked(service.summary).mockRejectedValueOnce(ErrInvalidTopMachines);
 
-    const res = await app.request("/reports/summary?top=21");
+    const res = await request(app, "/reports/summary?top=21");
 
     expect(res.status).toBe(400);
     const body = (await res.json()) as Record<string, unknown>;

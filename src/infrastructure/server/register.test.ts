@@ -1,7 +1,7 @@
 /**
  * Unit tests for the server layer's DI registration. We provide a container
  * with the minimum prerequisite registrations (`Config`, `Logger`,
- * `HealthRegistry`) and assert that `register` populates `App` (the Hono
+ * `HealthRegistry`) and assert that `register` populates `App` (the Elysia
  * instance) and `Application` (the orchestrator).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -71,7 +71,7 @@ function makeCfg(): Config {
 }
 
 describe("server.register", () => {
-  it("registers both the Hono app and the Application orchestrator", async () => {
+  it("registers both the Elysia app and the Application orchestrator", async () => {
     const { Application } = await import("./application.ts");
     const { AppKey, ApplicationKey, register } = await import("./index.ts");
 
