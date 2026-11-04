@@ -1,10 +1,10 @@
 /**
  * Feature composition: registers sentinels, builds the postgres repository
  * implementation, the usecase, and the HTTP handler, then mounts the router on
- * the infrastructure Hono app. The reporting
+ * the infrastructure Elysia app. The reporting
  * feature owns no schema, so it contributes no migrations.
  */
-import type { Hono } from "hono";
+import type { Elysia } from "elysia";
 import type { Container } from "../../app/container.ts";
 import { type Config, ConfigKey } from "../../infrastructure/config/config.ts";
 import { type DBHandle, DBKey } from "../../infrastructure/db/index.ts";
@@ -44,6 +44,6 @@ export function register(container: Container): void {
   const router = createReportingRouter({ service });
   container.registerValue(ReportingRouterKey, router);
 
-  const app = container.resolve<Hono>(AppKey);
-  app.route("/api/v1", router);
+  const app = container.resolve<Elysia>(AppKey);
+  app.group("/api/v1", (group) => group.use(router));
 }

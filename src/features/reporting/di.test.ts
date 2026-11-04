@@ -1,11 +1,11 @@
 /**
  * Unit tests for the reporting feature's DI registration. We provide a
- * container with `Config`, `DBHandle`, and a Hono `App` already registered,
+ * container with `Config`, `DBHandle`, and a Elysia `App` already registered,
  * then assert that `register` mounts the reporting router at `/api/v1`, maps
  * the sentinel, passes the configured bounds into the use case, and skips the
  * feature entirely when disabled.
  */
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../../app/container.ts";
 import { type Config, ConfigKey } from "../../infrastructure/config/config.ts";
@@ -129,7 +129,7 @@ function makeCfg(reportingEnabled: boolean, defaultTop = 5, maxTop = 20): Config
 
 function makeContainer(reportingEnabled: boolean, defaultTop = 5, maxTop = 20): Container {
   const container = new Container();
-  const app = new Hono();
+  const app = new Elysia();
   container.registerValue(ConfigKey, makeCfg(reportingEnabled, defaultTop, maxTop));
   container.registerValue(DBKey, {
     db: { _drizzle: true },
@@ -147,7 +147,7 @@ describe("reporting.register", () => {
 
     register(container);
 
-    const app = container.resolve<Hono>(AppKey);
+    const app = container.resolve<Elysia>(AppKey);
     expect(app.routes).toContainEqual(
       expect.objectContaining({ method: "GET", path: "/api/v1/reports/summary" }),
     );
@@ -182,7 +182,7 @@ describe("reporting.register", () => {
 
     register(container);
 
-    const app = container.resolve<Hono>(AppKey);
+    const app = container.resolve<Elysia>(AppKey);
     expect(app.routes.some((r) => r.path === "/api/v1/reports/summary")).toBe(false);
     expect(container.tryResolve(ReportingRouterKey)).toBeUndefined();
     expect(ctorArgs).toHaveLength(0);

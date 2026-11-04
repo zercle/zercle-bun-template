@@ -1,15 +1,15 @@
 /**
  * Unit tests for the server layer's DI registration. We provide a container
  * with the minimum prerequisite registrations (`Config`, `Logger`,
- * `HealthRegistry`) and assert that `register` populates `App` (the Hono
+ * `HealthRegistry`) and assert that `register` populates `App` (the Elysia
  * instance) and `Application` (the orchestrator).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../../app/container.ts";
+import { restoreBunServe, stubBunServe } from "../../testutil/bun.ts";
 import { type Config, ConfigKey } from "../config/config.ts";
 import { HealthRegistry, HealthRegistryKey, LoggerKey } from "../telemetry/index.ts";
 
-const originalBun = (globalThis as { Bun?: unknown }).Bun;
 const serveMock = vi.fn(() => ({
   hostname: "127.0.0.1",
   port: 1234,
@@ -19,16 +19,11 @@ const serveMock = vi.fn(() => ({
 
 beforeEach(() => {
   serveMock.mockClear();
-  (globalThis as { Bun: unknown }).Bun = { serve: serveMock };
+  stubBunServe(serveMock);
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
-  if (originalBun === undefined) {
-    delete (globalThis as { Bun?: unknown }).Bun;
-  } else {
-    (globalThis as { Bun?: unknown }).Bun = originalBun;
-  }
+  restoreBunServe();
 });
 
 function makeCfg(): Config {
@@ -76,7 +71,7 @@ function makeCfg(): Config {
 }
 
 describe("server.register", () => {
-  it("registers both the Hono app and the Application orchestrator", async () => {
+  it("registers both the Elysia app and the Application orchestrator", async () => {
     const { Application } = await import("./application.ts");
     const { AppKey, ApplicationKey, register } = await import("./index.ts");
 

@@ -3,10 +3,11 @@
  * stands in for the usecase layer so the router's parsing, status codes,
  * and error envelope are exercised without a database.
  */
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrConflict, ErrInvalidInput, ErrNotFound } from "../../../shared/errors/app-error.ts";
 import { registerSentinel } from "../../../shared/errors/sentinel.ts";
+import { request } from "../../../testutil/http.ts";
 import type { PurchaseResponse } from "../contract/purchase.ts";
 import {
   ErrExactChangeRequired,
@@ -53,19 +54,18 @@ describe("sales router (HTTP)", () => {
   });
 
   let service: SalesService;
-  let app: Hono;
+  let app: Elysia;
 
   beforeEach(() => {
     service = makeService();
-    app = new Hono();
-    app.route("/", createSalesRouter({ service }));
+    app = new Elysia().use(createSalesRouter({ service }));
   });
 
   it("POST /purchases with valid body -> 201 + purchase response", async () => {
     const resp = fixedResponse();
     vi.mocked(service.purchase).mockResolvedValueOnce(resp);
 
-    const res = await app.request("/purchases", {
+    const res = await request(app, "/purchases", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ machine_id: MACHINE_ID, product_id: PRODUCT_ID, coins: [50, 25] }),
@@ -84,7 +84,7 @@ describe("sales router (HTTP)", () => {
   });
 
   it("POST /purchases with malformed JSON -> 400 INVALID_INPUT", async () => {
-    const res = await app.request("/purchases", {
+    const res = await request(app, "/purchases", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: "{",
@@ -97,7 +97,7 @@ describe("sales router (HTTP)", () => {
   });
 
   it("POST /purchases with missing coins -> 400 INVALID_INPUT", async () => {
-    const res = await app.request("/purchases", {
+    const res = await request(app, "/purchases", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ machine_id: MACHINE_ID, product_id: PRODUCT_ID }),
@@ -110,7 +110,7 @@ describe("sales router (HTTP)", () => {
   });
 
   it("POST /purchases with a non-uuid id -> 400 INVALID_INPUT", async () => {
-    const res = await app.request("/purchases", {
+    const res = await request(app, "/purchases", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ machine_id: "not-a-uuid", product_id: PRODUCT_ID, coins: [50] }),
@@ -124,7 +124,7 @@ describe("sales router (HTTP)", () => {
 
   it("maps ErrOutOfStock to 409 CONFLICT", async () => {
     vi.mocked(service.purchase).mockRejectedValueOnce(ErrOutOfStock);
-    const res = await app.request("/purchases", {
+    const res = await request(app, "/purchases", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ machine_id: MACHINE_ID, product_id: PRODUCT_ID, coins: [50] }),
@@ -136,7 +136,7 @@ describe("sales router (HTTP)", () => {
 
   it("maps ErrProductNotFound to 404 NOT_FOUND", async () => {
     vi.mocked(service.purchase).mockRejectedValueOnce(ErrProductNotFound);
-    const res = await app.request("/purchases", {
+    const res = await request(app, "/purchases", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ machine_id: MACHINE_ID, product_id: PRODUCT_ID, coins: [50] }),
@@ -149,7 +149,7 @@ describe("sales router (HTTP)", () => {
   it("maps ErrInsufficientPayment and ErrExactChangeRequired to 400 INVALID_INPUT", async () => {
     for (const err of [ErrInsufficientPayment, ErrExactChangeRequired]) {
       vi.mocked(service.purchase).mockRejectedValueOnce(err);
-      const res = await app.request("/purchases", {
+      const res = await request(app, "/purchases", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ machine_id: MACHINE_ID, product_id: PRODUCT_ID, coins: [50] }),

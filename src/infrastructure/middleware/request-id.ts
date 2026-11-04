@@ -1,5 +1,5 @@
-import type { MiddlewareHandler } from "hono";
-import { runWithRequestId } from "./context.ts";
+import type { PreContext } from "elysia";
+import { enterRequestState } from "./context.ts";
 
 export const REQUEST_ID_HEADER = "X-Request-ID";
 
@@ -14,15 +14,16 @@ function isValidRequestId(id: string): boolean {
   return VALID_CHARSET.test(id);
 }
 
-export function requestId(): MiddlewareHandler {
-  return async (c, next) => {
-    const incoming = c.req.header(REQUEST_ID_HEADER) ?? "";
+/**
+ * Generate or validate the request id, echo it on the response, and bind it to
+ * the request context so the logger and the error mapper can read it.
+ */
+export function requestId(): (context: PreContext) => void {
+  return ({ request, set }) => {
+    const incoming = request.headers.get(REQUEST_ID_HEADER) ?? "";
     const id = isValidRequestId(incoming) ? incoming : crypto.randomUUID();
 
-    c.header(REQUEST_ID_HEADER, id);
-
-    await runWithRequestId(id, async () => {
-      await next();
-    });
+    set.headers[REQUEST_ID_HEADER] = id;
+    enterRequestState({ requestId: id, startedAt: performance.now() });
   };
 }

@@ -10,7 +10,7 @@
  *   4. flush + shutdown OTel tracer provider
  *   5. log "shutdown complete"
  */
-import type { Hono } from "hono";
+import type { Elysia } from "elysia";
 import type pino from "pino";
 import type { Container } from "../../app/container.ts";
 import { type Config, ConfigKey } from "../config/config.ts";
@@ -36,7 +36,7 @@ export class Application {
     // `register()` functions mount their routers onto. Rebuilding here would
     // silently drop every feature route (only middleware + health routes
     // would exist).
-    const app = this.container.resolve<Hono>(AppKey);
+    const app = this.container.resolve<Elysia>(AppKey);
     const port = this.cfg.http.port;
     const hostname = this.cfg.http.host;
     this.server = Bun.serve({ port, hostname, fetch: app.fetch });

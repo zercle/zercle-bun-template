@@ -1,10 +1,10 @@
 /**
  * Unit tests for the example feature's DI registration. We provide a
- * container with `Config`, `DBHandle`, and a Hono `App` already registered,
+ * container with `Config`, `DBHandle`, and a Elysia `App` already registered,
  * then assert that `register` mounts the sales router at `/api/v1`, wires the
  * sentinel mappings, and skips the feature entirely when disabled.
  */
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../../app/container.ts";
 import { type Config, ConfigKey } from "../../infrastructure/config/config.ts";
@@ -112,7 +112,7 @@ function makeCfg(salesEnabled: boolean): Config {
 
 function makeContainer(salesEnabled: boolean): Container {
   const container = new Container();
-  const app = new Hono();
+  const app = new Elysia();
   container.registerValue(ConfigKey, makeCfg(salesEnabled));
   container.registerValue(DBKey, {
     db: { _drizzle: true },
@@ -124,13 +124,13 @@ function makeContainer(salesEnabled: boolean): Container {
 }
 
 describe("sales.register", () => {
-  it("mounts the sales router at /api/v1/purchases on the existing Hono app", async () => {
+  it("mounts the sales router at /api/v1/purchases on the existing Elysia app", async () => {
     const { register } = await import("./di.ts");
     const container = makeContainer(true);
 
     register(container);
 
-    const app = container.resolve<Hono>(AppKey);
+    const app = container.resolve<Elysia>(AppKey);
     expect(app.routes).toContainEqual(
       expect.objectContaining({ method: "POST", path: "/api/v1/purchases" }),
     );
@@ -160,7 +160,7 @@ describe("sales.register", () => {
 
     register(container);
 
-    const app = container.resolve<Hono>(AppKey);
+    const app = container.resolve<Elysia>(AppKey);
     expect(app.routes.some((r) => r.path === "/api/v1/purchases")).toBe(false);
     expect(container.tryResolve(SalesRouterKey)).toBeUndefined();
   });

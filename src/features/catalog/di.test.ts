@@ -1,11 +1,11 @@
 /**
  * Unit tests for the catalog feature's DI registration. We provide a container
- * with `Config`, `DBHandle`, and a Hono `App` already registered, then assert
+ * with `Config`, `DBHandle`, and a Elysia `App` already registered, then assert
  * that `register` gates on the feature flag, mounts the router at `/api/v1`,
  * wires the sentinel mappings, and falls back cleanly when no cache-aside
  * facade is registered.
  */
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../../app/container.ts";
 import { type Config, ConfigKey } from "../../infrastructure/config/config.ts";
@@ -114,7 +114,7 @@ function makeCfg(catalogEnabled = true): Config {
 
 function makeContainer(catalogEnabled = true): Container {
   const container = new Container();
-  const app = new Hono();
+  const app = new Elysia();
   container.registerValue(ConfigKey, makeCfg(catalogEnabled));
   container.registerValue(DBKey, {
     db: { _drizzle: true },
@@ -132,8 +132,8 @@ describe("catalog.register", () => {
 
     register(container);
 
-    const app = container.resolve<{ route: ReturnType<typeof vi.fn> }>(AppKey);
-    expect(app.route).toBeDefined();
+    const app = container.resolve<Elysia>(AppKey);
+    expect(app.routes.map((r) => `${r.method} ${r.path}`)).toContain("POST /api/v1/products");
     expect(container.tryResolve(CatalogRouterKey)).toBeDefined();
   });
 
@@ -154,12 +154,11 @@ describe("catalog.register", () => {
   it("does nothing when the feature flag is false (no routes, no router key)", async () => {
     const { register, CatalogRouterKey } = await import("./di.ts");
     const container = makeContainer(false);
-    const app = container.resolve<Hono>(AppKey);
-    const routeSpy = vi.spyOn(app, "route");
+    const app = container.resolve<Elysia>(AppKey);
 
     register(container);
 
-    expect(routeSpy).not.toHaveBeenCalled();
+    expect(app.routes.map((r) => `${r.method} ${r.path}`)).not.toContain("POST /api/v1/products");
     expect(container.tryResolve(CatalogRouterKey)).toBeUndefined();
   });
 

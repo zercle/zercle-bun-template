@@ -1,6 +1,6 @@
 # zercle-bun-template
 
-Opinionated Bun + Hono + TypeScript HTTP service template: clean (DDD) architecture, an eager-singleton DI container, OpenTelemetry tracing, Prometheus metrics, PostgreSQL via Drizzle, and a Valkey cache-aside example — with four layered features (catalog, machines, sales, reporting) forming a small distributed-vending-machines demo to copy or delete.
+Opinionated Bun + Elysia + TypeScript HTTP service template: clean (DDD) architecture, an eager-singleton DI container, OpenTelemetry tracing, Prometheus metrics, PostgreSQL via Drizzle, and a Valkey cache-aside example — with four layered features (catalog, machines, sales, reporting) forming a small distributed-vending-machines demo to copy or delete.
 
 ## Prerequisites
 
@@ -52,14 +52,14 @@ zercle-bun-template/
 │   │       ├── usecase/        # inbound service interface + use-case orchestration
 │   │       ├── repository/     # outbound (driven) interface
 │   │       │   └── postgres/   # Drizzle repository + schema + cache-aside + migrations
-│   │       ├── handler/        # driving adapter: Hono handler
+│   │       ├── handler/        # driving adapter: Elysia router
 │   │       └── di.ts           # feature wiring
 │   ├── shared/                 # cross-feature contracts, no feature deps
 │   │   ├── errors/             # error codes, AppError, sentinels, HTTP mapper
 │   │   └── uuid.ts             # the canonical hyphenated-UUID shape
 │   ├── infrastructure/         # cross-cutting, feature-agnostic infrastructure
 │   │   ├── config/             # YAML + env-var configuration loader
-│   │   ├── server/             # Hono app + Application lifecycle
+│   │   ├── server/             # Elysia app + Application lifecycle
 │   │   ├── middleware/         # requestId, otel, accessLog, recover, cors, bodyLimit
 │   │   ├── telemetry/          # logger, tracer, meter, health registry
 │   │   ├── db/                 # connection-level Drizzle/postgres wiring (schema-free)
@@ -97,7 +97,7 @@ shared/* ── cross-feature contracts, never imports features/** or infrastruc
 - `domain` holds entities, value objects, and sentinel errors.
 - `usecase` declares the inbound service interface (speaking contract types) and its use-case implementation.
 - `repository` declares the outbound (driven) interface; `repository/postgres` satisfies it with Drizzle over the `postgres` driver and owns the table schema and SQL migrations.
-- `handler` is the driving adapter: the Hono handler parses contract types and delegates to the usecase service.
+- `handler` is the driving adapter: the Elysia router parses contract types and delegates to the usecase service.
 - `shared` holds cross-feature contracts both features and infrastructure depend on: the error catalog (`shared/errors/`) and the canonical UUID shape (`shared/uuid.ts`). It imports nothing but itself.
 - `infrastructure` consolidates cross-cutting concerns: config, db pool, valkey, cache-aside, middleware, server, telemetry.
 
@@ -160,21 +160,21 @@ Every HTTP failure — handler errors and framework errors (404/405, body-limit 
 
 ## Type-safe client & published contract
 
-`src/index.ts` re-exports the wire request/response schemas for the demo features, the error codes, and the `AppType` of the Hono app with the `/api/v1` routes mounted. Downstream services import from the package entry without touching server internals, and can drive a fully typed RPC client via `hono/client`. Health and metrics routes are mounted directly on the runtime app and are not part of `AppType`; reach them with plain `fetch`.
+`src/index.ts` re-exports the wire request/response schemas for the demo features, the error codes, and the `AppType` of the Elysia app with the `/api/v1` routes mounted. Downstream services import from the package entry without touching server internals, and can drive a fully typed RPC client via `@elysiajs/eden`. Health and metrics routes are mounted directly on the runtime app and are not part of `AppType`; reach them with plain `fetch`.
 
 ```ts
-import { hc } from "hono/client";
+import { treaty } from "@elysiajs/eden";
 import { ErrCodeNotFound, type AppType } from "zercle-bun-template";
 
-const client = hc<AppType>("http://localhost:8080");
+const client = treaty<AppType>("http://localhost:8080");
 
 // machineId / productId are ids returned by the machines and products calls.
-const res = await client.api.v1.products.$post({
-  json: { name: "cola", price_cents: 75, stock: 10 },
-});
-const list = await client.api.v1.products.$get({ query: { limit: 10, offset: 0 } });
-const purchase = await client.api.v1.purchases.$post({
-  json: { machine_id: machineId, product_id: productId, coins: [100] },
+const res = await client.api.v1.products.post({ name: "cola", price_cents: 75, stock: 10 });
+const list = await client.api.v1.products.get({ query: { limit: 10, offset: 0 } });
+const purchase = await client.api.v1.purchases.post({
+  machine_id: machineId,
+  product_id: productId,
+  coins: [100],
 });
 if (res.status === 404) {
   // body.error === ErrCodeNotFound
