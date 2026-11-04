@@ -1,10 +1,10 @@
 /**
  * Unit tests for the shared `Application` orchestrator. We mock `Bun.serve`,
- * the DI container's DB/valkey/tracer registrations, and the Hono app so the
+ * the DI container's DB/valkey/tracer registrations, and the Elysia app so the
  * lifecycle (`start`, `stop`, re-entrancy, error handling) can be exercised
  * without binding a port or connecting to real services.
  */
-import type { Hono } from "hono";
+import type { Elysia } from "elysia";
 import type pino from "pino";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../../app/container.ts";
@@ -84,7 +84,7 @@ function makeConfig(): Config {
 
 function makeContainer(cfg = makeConfig()): {
   container: Container;
-  stubApp: Hono;
+  stubApp: Elysia;
   logger: {
     info: ReturnType<typeof vi.fn>;
     warn: ReturnType<typeof vi.fn>;
@@ -98,7 +98,7 @@ function makeContainer(cfg = makeConfig()): {
   container.registerValue(HealthRegistryKey, {} as HealthRegistry);
   // The app under `AppKey` is what feature `register()` functions mount
   // routers onto; `Application.start()` must serve exactly this instance.
-  const stubApp = { fetch: vi.fn() } as unknown as Hono;
+  const stubApp = { fetch: vi.fn() } as unknown as Elysia;
   container.registerValue(AppKey, stubApp);
   return { container, stubApp, logger };
 }

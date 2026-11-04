@@ -1,19 +1,17 @@
-/**
- * Build the shared Hono application: middleware stack, observability routes
- * (/healthz, /readyz, /metrics), and the global error handler.
- *
- * Mirrors the Go template's `internal/shared/server/http.go`:
- *   1. apply middleware in a fixed order
- *   2. register observability routes
- *   3. route unhandled errors through the shared `httpError` mapper
- */
-import { Hono, type MiddlewareHandler } from "hono";
-import { bodyLimit as honoBodyLimit } from "hono/body-limit";
+import { Elysia } from "elysia";
 import type pino from "pino";
 import type { Container } from "../../app/container.ts";
-import { httpError } from "../../shared/errors/mapper.ts";
 import { type Config, ConfigKey, parseBodyLimitBytes } from "../config/config.ts";
-import { accessLog, cors, getRequestId, otel, recover, requestId } from "../middleware/index.ts";
+import {
+  accessLog,
+  bodyLimit,
+  cors,
+  getRequestId,
+  otel,
+  otelEnd,
+  recover,
+  requestId,
+} from "../middleware/index.ts";
 import {
   type HealthRegistry,
   HealthRegistryKey,
@@ -21,7 +19,7 @@ import {
   metricsHandler,
 } from "../telemetry/index.ts";
 
-/** Symbol used to register the Hono app instance in the DI container. */
+/** Symbol used to register the Elysia app instance in the DI container. */
 export const AppKey = Symbol("App");
 
 /**
@@ -39,70 +37,52 @@ export function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   // unhandledRejection. The race result is unaffected.
   p.catch(() => {});
   return Promise.race([p, timeout]).finally(() => {
-    if (timer !== undefined) clearTimeout(timer);
+    clearTimeout(timer);
   });
 }
 
 /**
- * Enforce a maximum request body size in bytes. Delegates to Hono's built-in
- * `bodyLimit`, which wraps the request body stream — so the limit is enforced
- * even when the client omits `Content-Length` (e.g. chunked transfer encoding).
- * Over-limit requests short-circuit with 413 + an AppError-shaped JSON body.
+ * Build the Elysia app with the standard middleware stack and observability
+ * routes. The returned `Elysia` instance is safe to drive directly with
+ * `app.handle(...)` in tests, or to hand to `Bun.serve` in production.
  */
-export function bodyLimit(limit: number): MiddlewareHandler {
-  return honoBodyLimit({
-    maxSize: limit,
-    onError: (c) => {
-      return c.json({ error: "INVALID_INPUT", message: "request body too large" }, 413);
-    },
-  });
-}
-
-/**
- * Build the Hono app with the standard middleware stack and observability
- * routes. The returned `Hono` instance is safe to drive directly with
- * `app.request(...)` in tests, or to hand to `Bun.serve` in production.
- */
-export function buildApp(container: Container): Hono {
+export function buildApp(container: Container): Elysia {
   const cfg = container.resolve<Config>(ConfigKey);
   const logger = container.resolve<pino.Logger>(LoggerKey);
   const health = container.resolve<HealthRegistry>(HealthRegistryKey);
 
-  const app = new Hono();
-
-  app.use("*", requestId());
-  app.use("*", otel());
-  app.use("*", accessLog(logger));
-  app.use("*", recover(logger));
-  app.use("*", cors(cfg));
   const limitBytes = parseBodyLimitBytes(cfg.http.body_limit);
-  if (limitBytes > 0) {
-    app.use("*", bodyLimit(limitBytes));
-  }
 
-  app.onError((err, c) => {
-    const { status, body } = httpError(err);
-    return c.json(body, status as 200);
-  });
+  const app = new Elysia()
+    .onRequest(requestId())
+    .onBeforeHandle(otel())
+    .onRequest(bodyLimit(limitBytes))
+    .onError(recover(logger))
+    .onAfterHandle(otelEnd())
+    .onAfterHandle(accessLog(logger))
+    .use(cors(cfg));
 
   const probeTimeoutMs = cfg.http.health_probe_timeout * 1000;
 
-  app.get("/healthz", async (c) => {
+  app.get("/healthz", async () => {
     try {
       await withTimeout(health.live(), probeTimeoutMs);
-      return c.body(null, 200);
+      return new Response(null, { status: 200 });
     } catch {
-      return c.body(null, 500);
+      return new Response(null, { status: 500 });
     }
   });
 
-  app.get("/readyz", async (c) => {
+  app.get("/readyz", async () => {
     try {
       await withTimeout(health.ready(), probeTimeoutMs);
-      return c.body(null, 200);
+      return new Response(null, { status: 200 });
     } catch (err) {
       logger.warn({ err, request_id: getRequestId() }, "readiness check failed");
-      return c.json({ status: "not ready" }, 503);
+      return new Response(JSON.stringify({ status: "not ready" }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      });
     }
   });
 

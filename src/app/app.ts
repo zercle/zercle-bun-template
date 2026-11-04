@@ -5,10 +5,10 @@
  *   1. config  (load + register `Config`)
  *   2. telemetry (logger, tracer, meter, health registry)
  *   3. infrastructure resources (db, valkey — async, requires live services)
- *   4. server (Hono app + Application)
+ *   4. server (Elysia app + Application)
  *   5. features (catalog, machines, sales, reporting — via the feature registry)
  *
- * `build()` connects to real services. Tests should build a Hono app directly
+ * `build()` connects to real services. Tests should build an Elysia app directly
  * via `buildApp(container)` against a hand-populated container — see
  * `src/infrastructure/server/server.test.ts`.
  */

@@ -1,7 +1,7 @@
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 import { pino } from "pino";
 import { describe, expect, it, vi } from "vitest";
-import { httpError } from "../../shared/errors/mapper.ts";
+import { request } from "../../testutil/http.ts";
 import type { Config } from "../config/config.ts";
 import { accessLog } from "./access-log.ts";
 import { getRequestId } from "./context.ts";
@@ -62,11 +62,9 @@ function makeConfig(overrides: Partial<Config["http"]> = {}): Config {
 
 describe("requestId middleware", () => {
   it("generates an id when no X-Request-ID header is supplied", async () => {
-    const app = new Hono();
-    app.use("*", requestId());
-    app.get("/", (c) => c.json({ id: getRequestId() }));
+    const app = new Elysia().onRequest(requestId()).get("/", () => ({ id: getRequestId() }));
 
-    const res = await app.request("/");
+    const res = await request(app, "/");
     expect(res.status).toBe(200);
     const headerId = res.headers.get(REQUEST_ID_HEADER);
     expect(headerId).toBeTruthy();
@@ -76,23 +74,19 @@ describe("requestId middleware", () => {
   });
 
   it("preserves a valid X-Request-ID header", async () => {
-    const app = new Hono();
-    app.use("*", requestId());
-    app.get("/", (c) => c.json({ id: getRequestId() }));
+    const app = new Elysia().onRequest(requestId()).get("/", () => ({ id: getRequestId() }));
 
     const supplied = "abcXYZ-0123_zzz";
-    const res = await app.request("/", { headers: { [REQUEST_ID_HEADER]: supplied } });
+    const res = await request(app, "/", { headers: { [REQUEST_ID_HEADER]: supplied } });
     expect(res.headers.get(REQUEST_ID_HEADER)).toBe(supplied);
     const body = (await res.json()) as { id: string };
     expect(body.id).toBe(supplied);
   });
 
   it("replaces an invalid X-Request-ID header (with spaces)", async () => {
-    const app = new Hono();
-    app.use("*", requestId());
-    app.get("/", (c) => c.text("ok"));
+    const app = new Elysia().onRequest(requestId()).get("/", () => "ok");
 
-    const res = await app.request("/", { headers: { [REQUEST_ID_HEADER]: "bad id with spaces" } });
+    const res = await request(app, "/", { headers: { [REQUEST_ID_HEADER]: "bad id with spaces" } });
     const echoed = res.headers.get(REQUEST_ID_HEADER);
     expect(echoed).toBeTruthy();
     expect(echoed).not.toBe("bad id with spaces");
@@ -100,12 +94,10 @@ describe("requestId middleware", () => {
   });
 
   it("replaces an X-Request-ID header that exceeds MAX_REQUEST_ID_LEN", async () => {
-    const app = new Hono();
-    app.use("*", requestId());
-    app.get("/", (c) => c.text("ok"));
+    const app = new Elysia().onRequest(requestId()).get("/", () => "ok");
 
     const tooLong = "a".repeat(MAX_REQUEST_ID_LEN + 1);
-    const res = await app.request("/", { headers: { [REQUEST_ID_HEADER]: tooLong } });
+    const res = await request(app, "/", { headers: { [REQUEST_ID_HEADER]: tooLong } });
     const echoed = res.headers.get(REQUEST_ID_HEADER);
     expect(echoed).toBeTruthy();
     expect(echoed).not.toBe(tooLong);
@@ -117,17 +109,11 @@ describe("recover middleware", () => {
   it("logs the panic and returns a 500 INTERNAL response", async () => {
     const logger = pino({ level: "silent" });
     const errorSpy = vi.spyOn(logger, "error");
-    const app = new Hono();
-    app.use("*", recover(logger));
-    app.onError((err, c) => {
-      const { status, body } = httpError(err);
-      return c.json(body, status as 500);
-    });
-    app.get("/boom", () => {
+    const app = new Elysia().onError(recover(logger)).get("/boom", () => {
       throw new Error("kaboom");
     });
 
-    const res = await app.request("/boom");
+    const res = await request(app, "/boom");
     expect(res.status).toBe(500);
     const body = (await res.json()) as { error: string; message: string };
     expect(body.error).toBe("INTERNAL");
@@ -137,11 +123,9 @@ describe("recover middleware", () => {
 
   it("does not crash on a clean request", async () => {
     const logger = pino({ level: "silent" });
-    const app = new Hono();
-    app.use("*", recover(logger));
-    app.get("/", (c) => c.text("fine"));
+    const app = new Elysia().onError(recover(logger)).get("/", () => "fine");
 
-    const res = await app.request("/");
+    const res = await request(app, "/");
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("fine");
   });
@@ -151,11 +135,9 @@ describe("accessLog middleware", () => {
   it("logs one info line per request with method, path, status, latency_ms", async () => {
     const logger = pino({ level: "silent" });
     const infoSpy = vi.spyOn(logger, "info");
-    const app = new Hono();
-    app.use("*", accessLog(logger));
-    app.get("/ping", (c) => c.text("pong"));
+    const app = new Elysia().mapResponse(accessLog(logger)).get("/ping", () => "pong");
 
-    const res = await app.request("/ping");
+    const res = await request(app, "/ping");
     expect(res.status).toBe(200);
 
     expect(infoSpy).toHaveBeenCalledTimes(1);
@@ -168,17 +150,17 @@ describe("accessLog middleware", () => {
     expect(args[1]).toBe("http request");
   });
 
-  it("logs the status code of a failed request when wrapped outside recover", async () => {
+  it("logs the status code of a failed request", async () => {
     const logger = pino({ level: "silent" });
     const infoSpy = vi.spyOn(logger, "info");
-    const app = new Hono();
-    app.use("*", accessLog(logger));
-    app.use("*", recover(logger));
-    app.get("/boom", () => {
-      throw new Error("x");
-    });
+    const app = new Elysia()
+      .onError(recover(logger))
+      .mapResponse(accessLog(logger))
+      .get("/boom", () => {
+        throw new Error("x");
+      });
 
-    const res = await app.request("/boom");
+    const res = await request(app, "/boom");
     expect(res.status).toBe(500);
 
     expect(infoSpy).toHaveBeenCalledTimes(1);
@@ -190,32 +172,37 @@ describe("accessLog middleware", () => {
 
 describe("cors middleware", () => {
   it("reflects the configured origin in Access-Control-Allow-Origin", async () => {
-    const app = new Hono();
-    app.use("*", cors(makeConfig({ cors_allow_origins: ["https://example.com"] })));
-    app.get("/", (c) => c.text("hi"));
+    const app = new Elysia()
+      .use(cors(makeConfig({ cors_allow_origins: ["https://example.com"] })))
+      .get("/", () => "hi");
 
-    const res = await app.request("/", { headers: { Origin: "https://example.com" } });
+    const res = await request(app, "/", { headers: { Origin: "https://example.com" } });
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://example.com");
   });
 
-  it("uses '*' when no origins are configured", async () => {
-    const app = new Hono();
-    app.use("*", cors(makeConfig({ cors_allow_origins: [] })));
-    app.get("/", (c) => c.text("hi"));
+  it("reflects the request origin when no origins are configured", async () => {
+    const app = new Elysia().use(cors(makeConfig({ cors_allow_origins: [] }))).get("/", () => "hi");
 
-    const res = await app.request("/", { headers: { Origin: "https://anywhere.test" } });
+    const res = await request(app, "/", { headers: { Origin: "https://anywhere.test" } });
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://anywhere.test");
+  });
+
+  it("allows any origin when the configured origin is '*'", async () => {
+    const app = new Elysia()
+      .use(cors(makeConfig({ cors_allow_origins: ["*"] })))
+      .get("/", () => "hi");
+
+    const res = await request(app, "/", { headers: { Origin: "https://anywhere.test" } });
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
 });
 
 describe("otel middleware", () => {
   it("passes the request through without throwing when no tracer provider is registered", async () => {
-    const app = new Hono();
     const { otel } = await import("./otel.ts");
-    app.use("*", otel());
-    app.get("/", (c) => c.text("ok"));
+    const app = new Elysia().onBeforeHandle(otel()).get("/", () => "ok");
 
-    const res = await app.request("/");
+    const res = await request(app, "/");
     expect(res.status).toBe(200);
     expect(await res.text()).toBe("ok");
   });

@@ -15,7 +15,7 @@
  *   1. config  (register the `Config` value first)
  *   2. telemetry (logger, tracer, meter, health registry)
  *   3. infrastructure (db, valkey — async)
- *   4. server (Hono app + Application)
+ *   4. server (Elysia app + Application)
  *   5. features (via the registry in src/features/features.ts)
  *
  * Keys are `Symbol("Name")` values exported from each module

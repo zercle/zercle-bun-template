@@ -5,38 +5,34 @@
  * touches the repository or its postgres implementation directly (enforced by
  * `src/architecture.test.ts`).
  */
-import { Hono } from "hono";
+import { Elysia } from "elysia";
 import { ErrInvalidInput } from "../../../shared/errors/app-error.ts";
-import { httpError } from "../../../shared/errors/mapper.ts";
+import { errorResponse } from "../../../shared/errors/respond.ts";
 import { SummaryRequest } from "../contract/summary.ts";
 import type { ReportingService } from "../usecase/service.ts";
 
-export function createReportingRouter(deps: { service: ReportingService }): Hono {
+export function createReportingRouter(deps: { service: ReportingService }): Elysia {
   const { service } = deps;
-  const router = new Hono();
+  const router = new Elysia();
 
-  router.get("/reports/summary", async (c) => {
-    const rawTop = c.req.query("top");
-    const query: { top?: number } = {};
+  router.get("/reports/summary", async ({ query }) => {
+    const parsedQuery: { top?: number } = {};
+    const rawTop = query.top;
     if (rawTop !== undefined && rawTop.length > 0) {
       const n = Number(rawTop);
       if (!Number.isFinite(n)) {
-        const { status, body: errBody } = httpError(ErrInvalidInput);
-        return c.json(errBody, status as 200);
+        return errorResponse(ErrInvalidInput);
       }
-      query.top = n;
+      parsedQuery.top = n;
     }
-    const parsed = SummaryRequest.safeParse(query);
+    const parsed = SummaryRequest.safeParse(parsedQuery);
     if (!parsed.success) {
-      const { status, body: errBody } = httpError(ErrInvalidInput);
-      return c.json(errBody, status as 200);
+      return errorResponse(ErrInvalidInput);
     }
     try {
-      const resp = await service.summary(parsed.data);
-      return c.json(resp, 200);
+      return await service.summary(parsed.data);
     } catch (err) {
-      const { status, body: errBody } = httpError(err);
-      return c.json(errBody, status as 200);
+      return errorResponse(err);
     }
   });
 
