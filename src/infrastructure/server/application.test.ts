@@ -37,8 +37,6 @@ const { serveMock, stopFn } = vi.hoisted(() => {
   return { serveMock, stopFn };
 });
 
-const originalBun = (globalThis as { Bun?: unknown }).Bun;
-
 function makeConfig(): Config {
   return {
     app: {
@@ -107,16 +105,7 @@ function makeContainer(cfg = makeConfig()): {
 beforeEach(() => {
   serveMock.mockClear();
   stopFn.mockClear();
-  (globalThis as { Bun: unknown }).Bun = { serve: serveMock };
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  if (originalBun === undefined) {
-    delete (globalThis as { Bun?: unknown }).Bun;
-  } else {
-    (globalThis as { Bun?: unknown }).Bun = originalBun;
-  }
+  vi.spyOn(Bun, "serve").mockImplementation(serveMock as never);
 });
 
 afterEach(() => {

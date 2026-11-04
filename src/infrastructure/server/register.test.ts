@@ -9,7 +9,6 @@ import { Container } from "../../app/container.ts";
 import { type Config, ConfigKey } from "../config/config.ts";
 import { HealthRegistry, HealthRegistryKey, LoggerKey } from "../telemetry/index.ts";
 
-const originalBun = (globalThis as { Bun?: unknown }).Bun;
 const serveMock = vi.fn(() => ({
   hostname: "127.0.0.1",
   port: 1234,
@@ -19,16 +18,11 @@ const serveMock = vi.fn(() => ({
 
 beforeEach(() => {
   serveMock.mockClear();
-  (globalThis as { Bun: unknown }).Bun = { serve: serveMock };
+  vi.spyOn(Bun, "serve").mockImplementation(serveMock as never);
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  if (originalBun === undefined) {
-    delete (globalThis as { Bun?: unknown }).Bun;
-  } else {
-    (globalThis as { Bun?: unknown }).Bun = originalBun;
-  }
 });
 
 function makeCfg(): Config {
