@@ -5,12 +5,8 @@
  */
 import { Hono } from "hono";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  ErrConflict,
-  ErrInvalidInput,
-  ErrNotFound,
-} from "../../../infrastructure/errors/app-error.ts";
-import { registerSentinel } from "../../../infrastructure/errors/sentinel.ts";
+import { ErrConflict, ErrInvalidInput, ErrNotFound } from "../../../shared/errors/app-error.ts";
+import { registerSentinel } from "../../../shared/errors/sentinel.ts";
 import type { PurchaseResponse } from "../contract/purchase.ts";
 import {
   ErrExactChangeRequired,

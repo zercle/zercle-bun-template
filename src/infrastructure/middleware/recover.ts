@@ -1,6 +1,6 @@
 import type { Context, MiddlewareHandler } from "hono";
 import type { Logger } from "pino";
-import { httpError } from "../errors/mapper.ts";
+import { httpError } from "../../shared/errors/mapper.ts";
 import { getRequestId } from "./context.ts";
 
 export function recover(logger: Logger): MiddlewareHandler {

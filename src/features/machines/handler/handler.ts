@@ -6,14 +6,13 @@
  * `src/architecture.test.ts`).
  */
 import { Hono } from "hono";
-import { ErrInvalidInput } from "../../../infrastructure/errors/app-error.ts";
-import { httpError } from "../../../infrastructure/errors/mapper.ts";
+import { ErrInvalidInput } from "../../../shared/errors/app-error.ts";
+import { httpError } from "../../../shared/errors/mapper.ts";
+import { UUID_RE } from "../../../shared/uuid.ts";
 import { CreateMachineRequest } from "../contract/create-machine.ts";
 import { ListMachinesRequest, RestockBankRequest } from "../contract/list-machines.ts";
 import { ErrInvalidID } from "../domain/errors.ts";
 import type { MachineService } from "../usecase/service.ts";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function createMachinesRouter(deps: { service: MachineService }): Hono {
   const { service } = deps;

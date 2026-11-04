@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { ErrInvalidInput, ErrNotFound } from "../../../infrastructure/errors/app-error.ts";
-import { registerSentinel } from "../../../infrastructure/errors/sentinel.ts";
+import { ErrInvalidInput, ErrNotFound } from "../../../shared/errors/app-error.ts";
+import { registerSentinel } from "../../../shared/errors/sentinel.ts";
 import type { MachineResponse } from "../contract/create-machine.ts";
 import type { ListMachinesResponse } from "../contract/list-machines.ts";
 import {

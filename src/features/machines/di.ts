@@ -9,9 +9,9 @@ import type { Hono } from "hono";
 import type { Container } from "../../app/container.ts";
 import { type Config, ConfigKey } from "../../infrastructure/config/config.ts";
 import { type DBHandle, DBKey } from "../../infrastructure/db/index.ts";
-import { ErrInvalidInput, ErrNotFound } from "../../infrastructure/errors/app-error.ts";
-import { registerSentinel } from "../../infrastructure/errors/sentinel.ts";
 import { AppKey } from "../../infrastructure/server/index.ts";
+import { ErrInvalidInput, ErrNotFound } from "../../shared/errors/app-error.ts";
+import { registerSentinel } from "../../shared/errors/sentinel.ts";
 import {
   ErrInvalidID,
   ErrInvalidMachineLabel,
