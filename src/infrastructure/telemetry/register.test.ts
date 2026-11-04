@@ -46,7 +46,7 @@ vi.mock("@opentelemetry/resources", () => ({
   resourceFromAttributes: (attrs: Record<string, unknown>) => attrs,
 }));
 
-vi.mock("@opentelemetry/sdk-trace-base", () => ({
+vi.mock("@opentelemetry/sdk-trace", () => ({
   ParentBasedSampler: class {
     root: unknown;
     constructor(opts: { root: unknown }) {

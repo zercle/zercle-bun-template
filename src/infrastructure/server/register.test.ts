@@ -6,10 +6,10 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../../app/container.ts";
+import { restoreBunServe, stubBunServe } from "../../testutil/bun.ts";
 import { type Config, ConfigKey } from "../config/config.ts";
 import { HealthRegistry, HealthRegistryKey, LoggerKey } from "../telemetry/index.ts";
 
-const originalBun = (globalThis as { Bun?: unknown }).Bun;
 const serveMock = vi.fn(() => ({
   hostname: "127.0.0.1",
   port: 1234,
@@ -19,16 +19,11 @@ const serveMock = vi.fn(() => ({
 
 beforeEach(() => {
   serveMock.mockClear();
-  (globalThis as { Bun: unknown }).Bun = { serve: serveMock };
+  stubBunServe(serveMock);
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
-  if (originalBun === undefined) {
-    delete (globalThis as { Bun?: unknown }).Bun;
-  } else {
-    (globalThis as { Bun?: unknown }).Bun = originalBun;
-  }
+  restoreBunServe();
 });
 
 function makeCfg(): Config {
