@@ -6,6 +6,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../../app/container.ts";
+import { restoreBunServe, stubBunServe } from "../../testutil/bun.ts";
 import { type Config, ConfigKey } from "../config/config.ts";
 import { HealthRegistry, HealthRegistryKey, LoggerKey } from "../telemetry/index.ts";
 
@@ -18,11 +19,11 @@ const serveMock = vi.fn(() => ({
 
 beforeEach(() => {
   serveMock.mockClear();
-  vi.spyOn(Bun, "serve").mockImplementation(serveMock as never);
+  stubBunServe(serveMock);
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  restoreBunServe();
 });
 
 function makeCfg(): Config {

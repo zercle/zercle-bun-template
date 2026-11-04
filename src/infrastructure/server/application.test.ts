@@ -8,6 +8,7 @@ import type { Hono } from "hono";
 import type pino from "pino";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../../app/container.ts";
+import { restoreBunServe, stubBunServe } from "../../testutil/bun.ts";
 import { type Config, ConfigKey } from "../config/config.ts";
 import { type DBHandle, DBKey } from "../db/db.ts";
 import { type ValkeyClient, ValkeyKey } from "../messaging/valkey.ts";
@@ -105,11 +106,11 @@ function makeContainer(cfg = makeConfig()): {
 beforeEach(() => {
   serveMock.mockClear();
   stopFn.mockClear();
-  vi.spyOn(Bun, "serve").mockImplementation(serveMock as never);
+  stubBunServe(serveMock);
 });
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  restoreBunServe();
 });
 
 describe("Application", () => {
