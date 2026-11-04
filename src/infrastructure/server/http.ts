@@ -11,8 +11,8 @@ import { Hono, type MiddlewareHandler } from "hono";
 import { bodyLimit as honoBodyLimit } from "hono/body-limit";
 import type pino from "pino";
 import type { Container } from "../../app/container.ts";
+import { httpError } from "../../shared/errors/mapper.ts";
 import { type Config, ConfigKey, parseBodyLimitBytes } from "../config/config.ts";
-import { httpError } from "../errors/mapper.ts";
 import { accessLog, cors, getRequestId, otel, recover, requestId } from "../middleware/index.ts";
 import {
   type HealthRegistry,

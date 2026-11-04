@@ -6,8 +6,8 @@
  */
 import { Hono } from "hono";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { ErrInvalidInput, ErrNotFound } from "../../../infrastructure/errors/app-error.ts";
-import { registerSentinel } from "../../../infrastructure/errors/sentinel.ts";
+import { ErrInvalidInput, ErrNotFound } from "../../../shared/errors/app-error.ts";
+import { registerSentinel } from "../../../shared/errors/sentinel.ts";
 import type { ProductResponse } from "../contract/create-product.ts";
 import type { ListProductsResponse } from "../contract/list-products.ts";
 import {
